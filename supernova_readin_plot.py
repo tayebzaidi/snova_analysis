@@ -19,7 +19,9 @@ if __name__== '__main__':
     #plotter.Show()
     data = readin.readin_SNrest('SN1972E.rest.dat')
     print data.phase, data.mag
-    #plotter.plot1D(data.phase, data.mag,'blue', 1,1) 
-    plt.plot(data.phase, data.mag, linestyle = '.')
-    plt.gca().invert_yaxis()
-    plt.show()
+    ax = plotter.plot1D(data.phase, data.mag,'blue',1) 
+    plotter.plot1D(data.phase, data.mag+ 1, 'red',1, lnstyle = "-")
+    plotter.Show()
+    #plt.plot(data.phase, data.mag, linestyle = ':')
+    #plt.gca().invert_yaxis()
+    #plt.show()

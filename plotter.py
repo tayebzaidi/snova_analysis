@@ -1,17 +1,15 @@
 import matplotlib.pyplot as plt
 import sys
 
-def plot1D(x,y,col,show, num_of_figs = 1, linewidth = 1.0, lnstyle = "."): #x is the 1D array of x axis data, y --> y-axis (independent var)
-    fig = plt.figure()
-    ax = fig.add_subplot(1,1,1)
+def plot1D(x,y,col,figure_number = 1, linewidth = 1.0, lnstyle = ":"): #x is the 1D array of x axis data, y --> y-axis (independent var)
+    fig = plt.figure(figure_number)
+    ax = fig.add_subplot(figure_number,1,1)
     ax.plot(x,y,color = col, linestyle = lnstyle)
-    if show == 1:
-        Show(fig)
     return fig
 
 
-def Show(fig):
-    plt.show(fig)    
+def Show():
+    plt.show()    
     
 
 
