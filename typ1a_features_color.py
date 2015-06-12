@@ -15,7 +15,7 @@ if __name__== '__main__':
     Mbdata = []
     delM15data = []
     hist_at_20 = []
-    path = "/Users/zaidi/Documents/REU/restframe/"
+    path = "/home/tensortrash/Downloads/restframe"
     filenames = os.listdir(path)
     random.shuffle(filenames)
     for filename in filenames:

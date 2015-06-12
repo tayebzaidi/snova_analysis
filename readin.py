@@ -23,7 +23,7 @@ def readin_SNANA(filename):
     return data, header
 
 def readin_SNrest(filename):
-    path = "/Users/zaidi/Documents/REU/restframe/"
+    path = "/home/tensortrash/Downloads/restframe/"
     formatcode = ('|S16,'.rstrip('#') +'f8,'*6 + '|S16,' + 4 * 'f8,' + '|S16,' * 3 + 'f8,' * 2 + '|S16,' + 'f8,' * 2)
     data = np.recfromtxt(os.path.join(path, filename),usecols = (0,1,2,3,4), dtype = formatcode, names = True, skip_header = 13, case_sensitive = 'lower', invalid_raise = False)
     ind = np.where(np.logical_or(data.band == 'B', data.band == 'V') & (data.err < 0.2))
