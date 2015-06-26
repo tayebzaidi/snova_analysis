@@ -11,23 +11,34 @@ import readin
 import sys
 import os
 
+def readin_SNrest(filename):
+    path = "/Users/zaidi/Documents/REU/restframe"
+    formatcode = ('|S16,'.rstrip('#') +'f8,'*6 + '|S16,' + 4 * 'f8,' + '|S16,   ' * 3 + 'f8,' * 2 + '|S16,' + 'f8,' * 2)
+    data = np.recfromtxt(os.path.join(path, filename),usecols = (0,1,2,3,4),    dtype = formatcode, names = True, skip_header = 13, case_sensitive = 'lower',   invalid_raise = False)
+    print data
+    ind = np.where(np.logical_or(data.band == 'B', data.band == 'V'))
+    banddata = data[ind]
+    return data
+
 if __name__== '__main__':
     Mbdata = []
     delM15data = []
     hist_at_20 = []
     path = "/Users/zaidi/Documents/REU/restframe/"
     filenames = os.listdir(path)
+    print filenames
     random.shuffle(filenames)
     for filename in filenames:
         current_file = os.path.join(path, filename)
-        data= readin.readin_SNrest(filename)
+        data = readin_SNrest(filename)
+        print data
         indB = np.where((data.band == 'B'))
         indV = np.where((data.band == 'V'))
         Bdata = data[indB]
         Vdata = data[indV]
         Vdata = np.sort(Vdata)
         Bdata = np.sort(Bdata)
-        
+         
         if len(Bdata.phase) > 5 and len(Vdata.phase) > 5:
             splB = scinterp.UnivariateSpline(Bdata.phase, Bdata.mag)
             splV = scinterp.UnivariateSpline(Vdata.phase, Vdata.mag)
@@ -46,7 +57,7 @@ if __name__== '__main__':
             fig3 = plt.figure(3)
             ax = fig3.add_subplot(1,1,1)
             ax.plot(Bdata.phase, color_mag)
-            #ax.plot(Bdata.phase, Bdata.mag)
+            ax.plot(Bdata.phase, Bdata.mag)
             plt.show()
             a = raw_input("Waiting")
             '''
@@ -59,22 +70,23 @@ if __name__== '__main__':
                 print minp
                 print filename
                 print splB(minp[0][0] + 15)
-                #fig = plt.figure(1)
-                #ax = fig.add_subplot(1,1,1)
-                #ax.plot(phase_newB, splC(phase_newB))
+                '''
+                fig = plt.figure(1)
+                ax = fig.add_subplot(1,1,1)
+                ax.plot(phase_newB, splC(phase_newB))
                 
                 if len(minp) > 0:
-                    #ax.scatter(minp[:,0],minp[:,1])
-                    pass
-                #plt.show(fig)
-
-    fig = plt.figure(2)
-    #ax = fig.subplot(1,1,1)
+                    ax.scatter(minp[:,0],minp[:,1])
+                    
+                plt.show(fig)
+                '''
+    fig = plt.figure()
+    #ax = fig.add_subplot(1,1,1)
     #ax.scatter(delM15data, Mbdata)
-    ax2 = fig.add_subplot(1,1,1)
+    ax2 = fig.add_subplot(2,1,1)
     ax2.hist(hist_at_20)
-    #ax.gca().invert_yaxis()
-    #ax.gca().invert_xaxis()
+    #fig.gca().invert_yaxis()
+    #fig.gca().invert_xaxis()
     plt.show(fig)
 
 

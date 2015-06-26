@@ -2,6 +2,14 @@ import numpy as np
 import sys
 import os
 
+def readin(filename):
+    if '.rest.dat' in filename:
+        data = readin_SNrest(filename)
+        return data
+    else:
+        data = 
+        
+
 def readin_aavso(filename):
     formatcode = ('f8,'*4 + '|S16,'*20).rstrip(',')
     data = np.recfromtxt(filename, delimiter='\t', names=True, dtype=formatcode,autostrip=True,case_sensitive='lower', invalid_raise=False)
@@ -15,19 +23,18 @@ def hstack2(arrays):
 
 def readin_SNANA(filename):
     #data = 
-    #for filename in filenames:
+    path = '/Users/zaidi/Documents/REU/SNDATA/lcmerge/'
     formatcode = ('|S16,'.rstrip(':') + 'f8,'+ '|S16,'*2 + 'f8,'*4 )
-    data = np.recfromtxt(filename,dtype = formatcode, names = True, skip_header = 15, case_sensitive='lower', invalid_raise = False)
-    dat = {}
-    header = {}
-    return data, header
+    data = np.recfromtxt(os.path.join(path,filename),dtype = formatcode, names = True, skip_header = 19, case_sensitive='lower', invalid_raise = False)
+    #header = np.recfromtxt(filename, 
+    return data
 
 def readin_SNrest(filename):
     path = "/Users/zaidi/Documents/REU/restframe/"
     formatcode = ('|S16,'.rstrip('#') +'f8,'*6 + '|S16,' + 4 * 'f8,' + '|S16,' * 3 + 'f8,' * 2 + '|S16,' + 'f8,' * 2)
     data = np.recfromtxt(os.path.join(path, filename),usecols = (0,1,2,3,4), dtype = formatcode, names = True, skip_header = 13, case_sensitive = 'lower', invalid_raise = False)
-    ind = np.where(np.logical_or(data.band == 'B', data.band == 'V') & (data.err < 0.2))
-    banddata = data[ind]
+    #ind = np.where(np.logical_or(data.band == 'B', data.band == 'V') & (data.err < 0.2))
+    #banddata = data[ind]
     '''
     for filename in os.listdir(path):
         current_file = os.path.join(path, filename)
@@ -37,7 +44,7 @@ def readin_SNrest(filename):
         dat = dat[ind]
         data = hstack2((data,dat))
     '''
-    return banddata
+    return data
 
 if __name__=='__main__':
     sys.exit()
