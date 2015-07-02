@@ -17,13 +17,13 @@ def find_nearest_ind(array,value):
     return idx
 
 def readin_SNrest(filename):
-    path = "/Users/zaidi/Documents/REU/restframe/"
+    path = "/home/tensortrash/Downloads/restframe"
     formatcode = ('|S16,'.rstrip('#') +'f8,'*6 + '|S16,' + 4 * 'f8,' + '|S16,' * 3 + 'f8,' * 2 + '|S16,' + 'f8,' * 2)
     data = np.recfromtxt(os.path.join(path, filename),usecols = (0,1,2,3,4), dtype = formatcode, names = True, skip_header = 13, case_sensitive = 'lower', invalid_raise = False)
     return data
 
 def readin_lcstandard_harvard():
-    path = '/Users/zaidi/Downloads/lc.standardsystem.sesn_allphot.dat'
+    path = '/home/tensortrash/Downloads/lc.standardsystem.sesn_allphot.dat'
     formatcode = ('|S16,' + '|S16,' + 'f8,' * 3 + '|S16,')
     data = np.recfromtxt(path, dtype = formatcode, names = ['filename', 'flt', 'mjd', 'mag', 'magerr', 'survey'], case_sensitive = 'lower', invalid_raise = False)
     data.flt = np.array([x.replace('prime','',1) for x in data.flt.tolist()])
@@ -117,7 +117,7 @@ def main2(splinedat):
         prnt = True
     except:
         prnt = False
-        path = "/Users/zaidi/Documents/REU/restframe/"
+        path = "/home/tensortrash/Downloads/restframe/"
         filenames = os.listdir(path)
         random.shuffle(filenames)
         prnt = True
