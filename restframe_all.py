@@ -13,7 +13,7 @@ import json
 import glob
 
 def find_nearest_ind(array,value):
-    idx = (np.abs(array-value)).argmin()
+    idx = np.abs(array-value).argmin()
     return idx
 
 def readin_SNrest(filename):
@@ -35,10 +35,11 @@ def main():
     B_band_offset = 0
     filenames = list(set(data.filename))
     random.shuffle(filenames)
-    #try:
-    #    filenames = []
-    #except:
-    #    pass
+    try:
+        pass
+        #filenames = []
+    except:
+        pass
     for filename in filenames:
         print filename, "\t"
         filters = list(set(data.flt))
@@ -56,7 +57,6 @@ def main():
                 idx_final = np.append(mjd_sampled_ind, sparse)
                 mjd_sampled = banddata.mjd[idx_final]
                 
-                #phase_knots = np.linspace(banddata.phase.min(), banddata.phase.max(), num = 5)
                 mjd_new = np.linspace(banddata.mjd.min(), banddata.mjd.max(), num = 200)
                 spl1d = scinterp.interp1d(banddata.mjd[order], banddata.mag[order])
                 maxp, minp = peakfinding.peakdetect(spl1d(mjd_new), mjd_new, 10, 0.03)
@@ -132,34 +132,30 @@ def main2(splinedat):
             if len(banddata.phase) > 10:
                
                 order = np.argsort(banddata.phase)
-                phase_sampled = np.array(np.arange(-20,20, 10))
-                sparse = np.arange(20, banddata.phase.max(), 20)
-                phase_sampled = np.append(phase_sampled, sparse)
-                ind_at_min = find_nearest_ind(phase_sampled, banddata.phase.min())
-                ind_at_max = find_nearest_ind(phase_sampled, banddata.phase.max())  
-                if phase_sampled[ind_at_min] < banddata.phase.min():
-                    ind_at_min += 1
-                if phase_sampled[ind_at_max] > banddata.phase.max():
-                    ind_at_max -= 1
-                phase_knots = phase_sampled[ind_at_min:ind_at_max]
-                #phase_knots = np.linspace(banddata.phase.min(), banddata.phase.max(), num = 5)
-                phase_new = np.linspace(banddata.phase.min(), banddata.phase.max(), num = 200)
+                phase_sampled_ind = np.arange(2, find_nearest_ind(banddata.phase[order], banddata.phase.min() + 25), 7)
+                sparse = np.arange(find_nearest_ind(banddata.phase[order], banddata.phase.min() + 25), find_nearest_ind(banddata.phase[order], banddata.phase.max()), 10)
+                idx_final = np.append(phase_sampled_ind, sparse) #connect wellsampled and sparse indices
+                phase_sampled = banddata.phase[order][idx_final]
+
+                phase_new = np.linspace(banddata.phase.min(), banddata.phase.max(), num = 200) # generate new phase data to sample at
+                
                 spl1d = scinterp.interp1d(banddata.phase[order], banddata.mag[order])
-                maxp, minp = peakfinding.peakdetect(spl1d(phase_new), phase_new, 20, 0.03)
+                maxp, minp = peakfinding.peakdetect(spl1d(phase_new), phase_new, 10, 0.03)
                 minp = np.array(minp)
                 maxp = np.array(maxp)
                 mag_knot = []
                 minp3 = []
                 maxp3 = []
-                print phase_knots
     
                 if len(minp) > 0 and minp[0][0] < 10 and minp[0][0] > -10:
+                    print banddata.phase
+                    print phase_sampled
                     try:
-                        tck = scinterp.splrep(banddata.phase[order], banddata.mag[order], t = phase_knots)
+                        tck = scinterp.splrep(banddata.phase[order], banddata.mag[order], t = phase_sampled, w = 1./(banddata.err[order])**2)
                     except:
-                        break
+                        pass
                     mag_knot = scinterp.splev(phase_new, tck)
-                    maxp3, minp3 = peakfinding.peakdetect(mag_knot, phase_new, 20, 0.1)
+                    maxp3, minp3 = peakfinding.peakdetect(mag_knot, phase_new, 10, 0.1)
                     minp3 = np.array(minp3)
                     maxp3 = np.array(maxp3) 
                                         
@@ -191,23 +187,23 @@ def main2(splinedat):
                     fig = plt.figure(figsize = (12,12))
                     ax = fig.add_subplot(1,1,1)
                     if len(phase_new) == len(mag_knot):
-                        ax.plot(phase_new, mag_knot, color = 'green')
-                    ax.plot(banddata.phase[order], spl1d(banddata.phase[order]))
-                    ax.scatter(banddata.phase, banddata.mag, color = 'yellow', alpha = 0.4)
+                        ax.plot(phase_20, splinedata, color = 'green')
+                    ax.plot(banddata.phase[order], spl1d(banddata.phase[order]) - banddata.mag.min())
+                    ax.scatter(banddata.phase, banddata.mag - banddata.mag.min(), color = 'brown', alpha = 0.4)
                     if len(minp) > 0:
-                        ax.scatter(minp[:,0], minp[:,1], color = 'red')
+                        ax.scatter(minp[:,0], minp[:,1] - banddata.mag.min(), color = 'red')
                     if len(minp3):
-                        ax.scatter(minp3[:,0], minp3[:,1], color = 'red')
+                        ax.scatter(minp3[:,0], minp3[:,1] - banddata.mag.min(), color = 'red')
                     if len(maxp) > 0:
-                        ax.scatter(maxp[:,0], maxp[:,1], color = 'blue')
+                        ax.scatter(maxp[:,0], maxp[:,1] - banddata.mag.min(), color = 'blue')
                     if len(maxp3) > 0:
-                        ax.scatter(maxp3[:,0], maxp3[:,1], color = 'blue')
+                        ax.scatter(maxp3[:,0], maxp3[:,1] - banddata.mag.min(), color = 'blue')
                         
                     plt.gca().invert_yaxis()
                     plt.show(fig)
                     '''
     
-    f_out = open('SplineDatarest', 'w')
+    f_out = open('SplineDatarestImproved', 'w')
     f_out.write(json.dumps(splinedat, sort_keys=True, indent=4))
     f_out.close()
 

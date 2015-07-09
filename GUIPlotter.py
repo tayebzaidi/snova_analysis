@@ -8,11 +8,28 @@ import numpy as np
 
 import matplotlib.figure
 import sys
+import os
 
 if sys.version_info[0] < 3:
     import Tkinter as Tk
 else:
     import tkinter as Tk
+
+def readin_SNrest():
+    path = "./data/restframe/"
+    formatcode = ('|S16,'.rstrip('#') +'f8,'*6 + '|S16,' + 4 * 'f8,' + '|S16,' * 3 + 'f8,' * 2 + '|S16,' + 'f8,' * 2)
+    filenames = os.listdir("./data/restframe/")
+    data = np.recfromtxt(os.path.join(path, filename),usecols = (0,1,2,3,4), dtype = formatcode, names = True, skip_header = 13, case_sensitive = 'lower', invalid_raise = False)
+    return data
+
+def readin_lcstandard_harvard():
+    path = '.data/lc.standardsystem.sesn_allphot.dat'
+    formatcode = ('|S16,' + '|S16,' + 'f8,' * 3 + '|S16,')
+    data = np.recfromtxt(path, dtype = formatcode, names = ['filename', 'flt', 'mjd', 'mag', 'magerr', 'survey'], case_sensitive = 'lower', invalid_raise = False)
+    data.flt = np.array([x.replace('prime','',1) for x in data.flt.tolist()])
+    return data
+
+
 
 class LCVisualization(Tk.Frame):
     def __init__(self, parent):
@@ -39,22 +56,21 @@ class LCVisualization(Tk.Frame):
         # This is where I begin the matplotlib code first initializing the Figure and 
 
     def initFigure(self, parent):
-        self.f = matplotlib.figure.Figure(figsize=(10,9), dpi=80)
-        self.ax0 = self.f.add_axes( (0.05, .05, .50, .50), axisbg=(.75,.75,.75), frameon=False)
-        self.ax1 = self.f.add_axes( (0.05, .55, .90, .45), axisbg=(.75,.75,.75), frameon=False)
-        self.ax2 = self.f.add_axes( (0.55, .05, .50, .50), axisbg=(.75,.75,.75), frameon=False)
+        self.f = matplotlib.figure.Figure(figsize=(5,5), dpi=90)
+        self.ax0 = self.f.add_axes( (0.35, .25, .50, .50), axisbg=(.75,.75,.75), frameon=False)
 
-        self.ax0.set_xlabel( 'Time (s)' )
-        self.ax0.set_ylabel( 'Frequency (Hz)' )
-        self.ax0.plot(np.max(np.random.rand(100,10)*10,axis=1),"r-")
-        self.ax1.plot(np.max(np.random.rand(100,10)*10,axis=1),"g-")
-        self.ax2.pie(np.random.randn(10)*100)    
+        self.ax0.set_xlabel( 'Time (days)' )
+        self.ax0.set_ylabel( 'Magnitude (Inverted)' )
+        print self.var.get()
+        print 'test'
+        if self.var.get() == "on":
+            self.ax0.plot([1,2,3])
 
         self.frame = Tk.Frame( parent )
-        self.frame.pack(side=Tk.LEFT, fill=Tk.BOTH, expand=1)
+        self.frame.pack()
  
         self.canvas = tkagg.FigureCanvasTkAgg(self.f, master=self.frame)
-        self.canvas.get_tk_widget().pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
+        self.canvas.get_tk_widget().pack()
         self.canvas.show()
      
         self.toolbar = tkagg.NavigationToolbar2TkAgg(self.canvas, self.frame )
@@ -68,13 +84,17 @@ class LCVisualization(Tk.Frame):
         self.quit()
 
     def Checkboxes(self, parent):
-        self.var = Tk.IntVar()
-        c = Tk.Checkbutton(parent, text="FillerText", variable=self.var)
+        self.var = Tk.BooleanVar()
+        c = Tk.Checkbutton(parent, text="FillerText", onvalue="on",offvalue = "off", variable = self.var)
         c.pack()
+        print self.var.get()
+    
+    def cb(self):
+        print self.var.get()
 
 def main():
     root = Tk.Tk()
-    root.geometry("300x300+300+300")
+    root.geometry("900x900+300+300")
     app = LCVisualization(root)
     root.update()
     root.deiconify()
