@@ -35,7 +35,6 @@ class LCVisualization(Tk.Frame):
     def __init__(self, parent):
         Tk.Frame.__init__(self, parent)
         self.parent = parent
-
         self.initUI(parent)
         
 
@@ -61,9 +60,8 @@ class LCVisualization(Tk.Frame):
 
         self.ax0.set_xlabel( 'Time (days)' )
         self.ax0.set_ylabel( 'Magnitude (Inverted)' )
-        print self.var.get()
-        print 'test'
-        if self.var.get() == "on":
+        if self.var.get() == 1:
+            print 'test'
             self.ax0.plot([1,2,3])
 
         self.frame = Tk.Frame( parent )
@@ -83,14 +81,18 @@ class LCVisualization(Tk.Frame):
     def onExit(self):
         self.quit()
 
+    def cb(self):
+        print self.var.get()
+        if self.var.get() == "1":
+            print 'test'
+            self.initFigure(self.parent)
+
     def Checkboxes(self, parent):
-        self.var = Tk.BooleanVar()
-        c = Tk.Checkbutton(parent, text="FillerText", onvalue="on",offvalue = "off", variable = self.var)
+        self.var = Tk.StringVar()
+        c = Tk.Checkbutton(parent, text="FillerText", variable = self.var, command=self.cb)
         c.pack()
         print self.var.get()
     
-    def cb(self):
-        print self.var.get()
 
 def main():
     root = Tk.Tk()
