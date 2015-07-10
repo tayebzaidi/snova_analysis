@@ -30,9 +30,8 @@ def readin_lcstandard_harvard():
     return data
 
 def main():
-    splinedat = [{}]
+    splinedat = []
     data = readin_lcstandard_harvard()
-    B_band_offset = 0
     filenames = list(set(data.filename))
     random.shuffle(filenames)
     #try:
@@ -43,7 +42,9 @@ def main():
         print filename, "\t"
         filters = list(set(data.flt))
         idx = np.where((np.array(filters) == 'B'))
-        print idx
+        if len(idx) == 0:
+            print idx
+            break
         filters.insert(0, filters.pop(idx[0])) #Move B band to front of filters array
         print filters
         for flter in filters:
@@ -75,19 +76,30 @@ def main():
                     tck = scinterp.splrep(banddata.mjd[order], banddata.mag[order], t = mjd_sampled, w = 1./(banddata.magerr)**2)
                     mag_knot = scinterp.splev(mjd_new, tck)
                     maxp3, minp3 = peakfinding.peakdetect(mag_knot, mjd_new, 20, 0.1)
-                    
-                    mjd_20 = np.linspace(banddata.mjd[order].min(), banddata.mjd[order].min() + 40, num = 30)
+                    print minp3
+                    try:
+                        mjd_20 = np.linspace(minp3[0][0] - 8, minp3[0][0] + 25, num = 50)
+                    except:
+                        break
                     splinedata = scinterp.splev(mjd_20, tck)
-
                     #phase correction
                         
-                    mjd_20 = mjd_20 - minp[0][0]
-                        
+                    try:
+                        mjd_20 = mjd_20 - minp3[0][0]
+                    except:
+                        break    
                     #magnitude correction
-                    splinedata = splinedata - banddata.mag.min()
-                                    
-    
-                    splinedat.append({'id': filename, 'dataset': 2, 'band': flter, 'splinedata': splinedata.tolist(), 'phase': mjd_20.tolist()})
+                    try:
+                        splinedata = splinedata - minp3[0][1]
+                    except:
+                        break
+                    for i in splinedata:
+                        if i > 5 or i < -1:
+                            print 'failure'
+                            splinedata = []
+           
+                    if len(splinedata) > 0:
+                        splinedat.append({'id': filename, 'dataset': 2, 'band': flter, 'splinedata': splinedata.tolist(), 'phase': mjd_20.tolist()})
                 
 
                 #fig = plt.figure(figsize = (12,12))
@@ -125,6 +137,10 @@ def main2(splinedat):
         print filename
         data = readin_SNrest(filename)
         filters = list(set(data.band))
+        idx = np.where(data.band == 'B')
+        if len(idx) == 0:
+            print 'no B'
+            break
         for flter in filters:
             ind = np.where(data.band == flter)
             banddata = data[ind]
@@ -162,14 +178,29 @@ def main2(splinedat):
                     maxp3, minp3 = peakfinding.peakdetect(mag_knot, phase_new, 20, 0.1)
                     minp3 = np.array(minp3)
                     maxp3 = np.array(maxp3) 
-                                        
-                    phase_20 = np.linspace(banddata.phase.min(), banddata.phase.min() + 40, num = 30)
-                    splinedata = scinterp.splev(phase_20, tck)
+                    
+                    try:                    
+                        phase_20 = np.linspace(minp3[0][0] - 8, minp3[0][0] + 25, num = 30)
+                    except:
+                        break
 
+                    try:
+                        phase_20 = phase_20 - minp3[0][0]
+                    except:
+                        break
+                    splinedata = scinterp.splev(phase_20, tck)
                     #magnitude correction
-                    splinedata = splinedata - banddata.mag.min()
-    
-                    splinedat.append({'id': filename, 'data': 1,'band': flter, 'splinedata': splinedata.tolist(), 'phase': phase_20.tolist()})
+                    try:
+                        splinedata = splinedata - minp3[0][1]
+                    except:
+                        break
+                    for i in splinedata:
+                        if i > 4 or i < -1:
+                            print 'failure'
+                            splinedata = []
+
+                    if len(splinedata) > 0:
+                        splinedat.append({'id': filename, 'dataset': 1,'band': flter, 'splinedata': splinedata.tolist(), 'phase': phase_20.tolist()})
                 #t = minp[:,0]
                 #spl.set_smoothing_factor(0.1)
                 #mag_new = spl(phase_new)
@@ -206,8 +237,8 @@ def main2(splinedat):
                     plt.gca().invert_yaxis()
                     plt.show(fig)
                     '''
-    
-    f_out = open('SplineDatarest', 'w')
+    f_out = open('SplineDatarest2', 'w')
+    print ('file written')
     f_out.write(json.dumps(splinedat, sort_keys=True, indent=4))
     f_out.close()
 
