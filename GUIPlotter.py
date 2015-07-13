@@ -156,9 +156,10 @@ class LCVisualization(Tk.Frame):
     def BandRadioButtons(self):
         self.RBFrame = Tk.Frame(height=2, bd=1, relief=Tk.SUNKEN, master = self.ButtonFrame)
         self.RBFrame.grid(row=2,padx=5,pady=5)
+        self.band.set("B")
         Buttons = set(self.rec.band)  #Define the Buttons to be a set of all possible bands
         for i,text in enumerate(Buttons):
-            Tk.Radiobutton(self.RBFrame, text='Band %s' % text, variable = self.band, value = text,command = self.bandcheck).grid(row=i)
+            band + str(i) = Tk.Radiobutton(self.RBFrame, text='Band %s' % text, variable = self.band, value = text,command = self.bandcheck).grid(row=i)
 
     def SplineFitType(self):
         pass
@@ -179,14 +180,12 @@ class LCVisualization(Tk.Frame):
 
 def splinefit(rec, toggle, band):
     splinedat = []
-    if toggle == "All":
-        filenames = np.unique(rec.name).tolist()
-    else:
-        filenames_tmp = np.unique(rec.name).tolist()
-        random.shuffle(filenames_tmp)
-        filenames = [filenames_tmp[1]]
+    filenames = np.unique(rec.name).tolist()
+    filenames_tmp = np.unique(rec.name).tolist()
+    random.shuffle(filenames_tmp)
+    
     for filename in filenames:
-        filters = [band]
+        filters = np.unique
         for flter in filters:
             idx = np.where((rec.band == flter) & (rec.name == filename))
             banddata_unsorted = rec[idx]
