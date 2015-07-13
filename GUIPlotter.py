@@ -13,6 +13,7 @@ import scipy.interpolate as scinterp
 import itertools
 import random
 import os
+import SplineFit
 
 if sys.version_info[0] < 3:
     import Tkinter as Tk
@@ -81,11 +82,13 @@ class LCVisualization(Tk.Frame):
         self.dataRFrame = Tk.StringVar()
         self.band = Tk.StringVar()
         self.toggle = Tk.StringVar()
+        self.stype = Tk.StringVar()
         self.rec = self.GetData()
 
         self.initFigure(parent)
         self.DataSelect(parent)
         self.BandRadioButtons()
+        self.SplineFitType()
         self.Selection()
 
 
@@ -113,12 +116,18 @@ class LCVisualization(Tk.Frame):
     # Create method Plot to allow for on the fly adjustment of the plotting
     def Plot(self):
         self.ax0.clear()
-        splinedat = splinefit(self.rec, self.toggle.get(), self.band.get())
+        if self.stype.get() == "UnivariateSpline":
+            splinedat = SplineFit.Usplinefit(self.rec, self.toggle.get(), self.band.get())
+        else:
+            splinedat = SplineFit.splinefit(self.rec, self.toggle.get(), self.band.get())
         
         for data in splinedat:
                 ydata = data['splinedata']
                 xdata = data['phase'] 
+                xraw = data['xraw']
+                yraw = data['yraw']
                 self.ax0.plot(xdata, ydata)
+                self.ax0.scatter(xraw, yraw)
 
         self.canvas.show()
         
@@ -159,12 +168,16 @@ class LCVisualization(Tk.Frame):
         self.band.set("B")
         Buttons = set(self.rec.band)  #Define the Buttons to be a set of all possible bands
         for i,text in enumerate(Buttons):
-            band + str(i) = Tk.Radiobutton(self.RBFrame, text='Band %s' % text, variable = self.band, value = text,command = self.bandcheck).grid(row=i)
+            text = Tk.Radiobutton(self.RBFrame, text='Band %s' % text, variable = self.band, value = text,command = self.bandcheck).grid(row=i)
 
     def SplineFitType(self):
-        pass
+        self.STypeFrame = Tk.Frame(height=2, bd=1, relief=Tk.SUNKEN, master= self.ButtonFrame)  
+        self.STypeFrame.grid(row=3, padx=5, pady=5)
+        self.stype.set("UnivariateSpline")
+        Tk.Radiobutton(self.STypeFrame, text="Univariate", variable = self.stype, value = "UnivariateSpline", command = self.sftype).grid(row=0,padx=5,pady=5)
+        Tk.Radiobutton(self.STypeFrame, text="Splrep", variable = self.stype, value = "splrep", command = self.sftype).grid(row=1,padx=5,pady=5)
+        
 
- 
     #Define the commands all the Buttons are tied to
     
     #Start with the Data Selection commands
@@ -178,63 +191,8 @@ class LCVisualization(Tk.Frame):
         print self.toggle.get()
         self.Plot()
 
-def splinefit(rec, toggle, band):
-    splinedat = []
-    filenames = np.unique(rec.name).tolist()
-    filenames_tmp = np.unique(rec.name).tolist()
-    random.shuffle(filenames_tmp)
-    
-    for filename in filenames:
-        filters = np.unique
-        for flter in filters:
-            idx = np.where((rec.band == flter) & (rec.name == filename))
-            banddata_unsorted = rec[idx]
-            if len(banddata_unsorted.mjd) > 6:
-                order = np.argsort(banddata_unsorted.mjd)
-                banddata = banddata_unsorted[order]
-                mjd_sampled_ind = np.arange(2, find_nearest_ind(banddata.mjd, banddata.mjd.min() + 25), 4)
-                sparse =  np.arange(find_nearest_ind(banddata.mjd, banddata.mjd.min() + 25), find_nearest_ind(banddata.mjd, banddata.mjd.max()), 10)
-                idx_final = np.append(mjd_sampled_ind, sparse)
-                mjd_sampled = banddata.mjd[idx_final]
-                
-                mjd_new = np.linspace(banddata.mjd.min(), banddata.mjd.max(), num = 200)
-                spl1d = scinterp.interp1d(banddata.mjd, banddata.mag)
-                maxp, minp = peakfinding.peakdetect(spl1d(mjd_new), mjd_new, 10, 0.03)
-                
-                minp = np.array(minp)
-                maxp = np.array(maxp)
-                mag_knot = []
-                minp3 = []
-                maxp3 = []
-
-                if len(minp) > 0 and minp[0][0] < (banddata.mjd.min() + 25) and minp[0][0] > banddata.mjd.min():
-                    
-                                            
-                    print flter
-                    try: 
-                        tck = scinterp.splrep(banddata.mjd, banddata.mag, t = mjd_sampled, w = 1./(banddata.magerr)**2)
-                    except:
-                        print mjd_sampled
-                    mag_knot = scinterp.splev(mjd_new, tck)
-                    maxp3, minp3 = peakfinding.peakdetect(mag_knot, mjd_new, 20, 0.1)
-                    
-                    mjd_20 = np.linspace(minp[0][0] - 5, minp[0][0] + 20, num = 30)
-                    splinedata = scinterp.splev(mjd_20, tck)
-
-                    #phase correction
-                        
-                    mjd_20 = mjd_20 - minp[0][0]
-                        
-                    #magnitude correction
-                    splinedata = splinedata - banddata.mag.min()
-                                    
-    
-                    splinedat.append({'id': filename, 'dataset': 2, 'band': flter, 'splinedata': splinedata.tolist(), 'phase': mjd_20.tolist()})
-    print splinedat
-    return splinedat
-
-
-
+    def sftype(self):
+        print self.stype.get()
     
 
 def main():
