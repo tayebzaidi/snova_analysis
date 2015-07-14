@@ -2,6 +2,9 @@ import numpy as np
 import sys
 import os
 
+def hstack2(arrays) :
+  return arrays[0].__array_wrap__(np.hstack(arrays))
+
 class Lightcurve(object):
     def __init__(self, name, band, mjd, mag, magerr):
         self.name = name
@@ -11,10 +14,14 @@ class Lightcurve(object):
         self.magerr = magerr
 
     def toRecArray(self):
-        rec = np.recarray((len(self.name),),dtype=[('name', 'S20'), ('band', 'S20'), ('mjd', float), ('mag', float), ('magerr', float)])
-        rec.name = self.name
-        rec.band = self.band
-        rec.mjd = self.mjd
-        rec.mag = self.mag
-        rec.magerr = self.magerr
-        return rec
+        self.rec = np.recarray((len(self.name),),dtype=[('name', 'S20'), ('band', 'S20'), ('mjd', float), ('mag', float), ('magerr', float)])
+        self.rec.name = self.name
+        self.rec.band = self.band
+        self.rec.mjd = self.mjd
+        self.rec.mag = self.mag
+        self.rec.magerr = self.magerr
+        return self.rec
+
+def combine2(LC1, LC2):
+    stacked = hstack2((LC1, LC2))
+    return stacked 

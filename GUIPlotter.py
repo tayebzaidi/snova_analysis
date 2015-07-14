@@ -4,6 +4,7 @@ matplotlib.use('TkAgg')
 import matplotlib.backends.backend_tkagg as tkagg
 from matplotlib.backend_bases import key_press_handler
 from LightcurveClass import Lightcurve
+import LightcurveClass
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.figure
@@ -15,38 +16,12 @@ import random
 import os
 import SplineFit
 import readin
+import json
 
 if sys.version_info[0] < 3:
     import Tkinter as Tk
 else:
     import tkinter as Tk
-
-def find_nearest_ind(array,value):
-    idx = np.abs(array-value).argmin()
-    return idx
-
-def readin_SNrest():
-    path = "./data/restframe/"
-    objnames, band, mjd, mag, magerr = [],[],[],[],[]
-    formatcode = ('|S16,'.rstrip('#') +'f8,'*6 + '|S16,' + 4 * 'f8,' + '|S16,' * 3 + 'f8,' * 2 + '|S16,' + 'f8,' * 2)
-    filenames = os.listdir("./data/restframe/")
-    for filename in filenames:
-        data = np.recfromtxt(os.path.join(path, filename),usecols = (0,1,2,3,4), dtype = formatcode, names = True, skip_header = 13, case_sensitive = 'lower', invalid_raise = False)
-        name = np.empty(len(data.band), dtype = 'S20')
-        name.fill(filename)
-        objnames.append(name)
-        band.append(data.band)
-        mjd.append(data.phase)
-        mag.append(data.mag)
-        magerr.append(data.err)
-        
-    objnames = np.fromiter(itertools.chain.from_iterable(objnames), dtype = 'S20')
-    band = np.fromiter(itertools.chain.from_iterable(band), dtype = 'S16')
-    mjd = np.fromiter(itertools.chain.from_iterable(mjd), dtype = 'float')
-    mag = np.fromiter(itertools.chain.from_iterable(mag), dtype = 'float')
-    magerr = np.fromiter(itertools.chain.from_iterable(magerr), dtype = 'float')
-    LC = Lightcurve(objnames, band, mjd, mag, magerr)
-    return LC
 
 class LCVisualization(Tk.Frame):
     def __init__(self, parent):
@@ -59,29 +34,36 @@ class LCVisualization(Tk.Frame):
         
         self.parent.title("LC Visualization")
     
-        self.menu = Tk.Menu(self.parent, tearoff=0)
-        self.menu.add_command(label="Beep", command=self.bell())
-        self.menu.add_command(label="Exit", command=self.onExit)
-    
-        self.parent.bind("<Double-Button-1>", self.showMenu)
-        self.grid(row=0,padx=5,pady=5)    
        
         self.ButtonFrame=Tk.Frame(bd=1, relief=Tk.SUNKEN)
         self.ButtonFrame.grid(row=0,padx=5,pady=5, column=0)        
+        self.DataFrame = Tk.Frame(bd=1, relief=Tk.SUNKEN, master = self.ButtonFrame)
+        self.DataFrame.grid(row=0,padx=5,pady=5)
+        self.ToggleFrame = Tk.Frame(height=2, bd=1, relief=Tk.SUNKEN, master = self.ButtonFrame)
+        self.ToggleFrame.grid(row=1)
+        self.RBFrame = Tk.Frame(height=2, bd=1, relief=Tk.SUNKEN, master = self.ButtonFrame)
+        self.RBFrame.grid(row=2,padx=5,pady=5)
+        self.STypeFrame = Tk.Frame(height=2, bd=1, relief=Tk.SUNKEN, master= self.ButtonFrame)  
+        self.STypeFrame.grid(row=3, padx=5, pady=5)
+        self.JSONFrame = Tk.Frame(height = 2, bd=1, relief = Tk.SUNKEN, master = self.ButtonFrame)
+        self.JSONFrame.grid(row=4, padx=5, pady=5)
+
+
 
         #initialize variables here
-        self.dataHV = Tk.StringVar()
-        self.dataRFrame = Tk.StringVar()
+        self.dataHV = Tk.IntVar()
+        self.dataRFrame = Tk.IntVar()
         self.band = Tk.StringVar()
         self.toggle = Tk.StringVar()
         self.stype = Tk.StringVar()
-        self.rec = self.GetData()
+
+        self.GetData()
 
         self.initFigure(parent)
         self.DataSelect(parent)
-        self.BandRadioButtons()
         self.SplineFitType()
         self.Selection()
+        self.JSONExport()
 
 
         # This is where I begin the matplotlib code first initializing the Figure 
@@ -105,15 +87,13 @@ class LCVisualization(Tk.Frame):
         self.toolbar.grid(row=2)
         self.toolbar.update()
 
-        self.canvas.mpl_connect('pick_event', self.onPick)         
-
     # Create method Plot to allow for on the fly adjustment of the plotting
     def Plot(self):
         self.ax0.clear()
         if self.stype.get() == "UnivariateSpline":
-            splinedat = SplineFit.Usplinefit(self.rec, self.toggle.get(), self.band.get())
+            splinedat, length = SplineFit.Usplinefit(self.rec, self.toggle.get(), self.band.get())
         else:
-            splinedat = SplineFit.splinefit(self.rec, self.toggle.get(), self.band.get())
+            splinedat, length = SplineFit.splinefit(self.rec, self.toggle.get(), self.band.get())
         
         for data in splinedat:
                 ydata = data['splinedata']
@@ -122,9 +102,10 @@ class LCVisualization(Tk.Frame):
                     xraw = data['xraw']
                     yraw = data['yraw']
                     self.ax0.scatter(xraw, yraw)
-                self.ax0.plot(xdata, ydata)
+                line, = self.ax0.plot(xdata, ydata, picker=self.line_picker)
 
         self.canvas.show()
+        self.f.canvas.mpl_connect('pick_event', self.onPick)         
         
             
 
@@ -134,49 +115,78 @@ class LCVisualization(Tk.Frame):
     def showMenu(self, e):
         self.menu.post(e.x_root, e.y_root)
 
+    def line_picker(self, line, mouseevent):
+        if mouseevent.xdata is None: return False, dict()
+        xdata = line.get_xdata()
+        ydata = line.get_ydata()
+        maxd = 0.05
+        d = np.sqrt((xdata-mouseevent.xdata)**2. + (ydata-mouseevent.ydata)**2.)
+        ind = np.nonzero(np.less_equal(d, maxd))
+        if len(ind):
+            pickx = np.take(xdata, ind)
+            picky = np.take(ydata, ind)
+            props = dict(ind=ind, pickx=pickx, picky=picky)
+            return True, props
+        else:
+            return False, dict()
+
     def onPick(self, event):
-        ind = event.ind
-        print 'onpick3 scatter:', ind, npy.take(x, ind), npy.take(y, ind)
+        print('onpick line', event.pickx, event.picky)
 
     def onExit(self):
         self.quit()
 
     def GetData(self):
-        LCR = readin.SNrest()
-        LCHV = readin.harvard()
-        #LCDES = 
-        rec = LCHV.toRecArray()
-        return rec
+        if self.dataHV.get() * self.dataRFrame.get() == 1:
+            LCR = readin.SNrest()
+            LCHV = readin.harvard()
+            self.LCRrec = LCR.toRecArray()
+            self.LCHVrec = LCHV.toRecArray()
+            LC = LightcurveClass.combine2(self.LCHVrec, self.LCRrec)
+            print LC
+            self.rec = LC
+
+        elif self.dataHV.get() == 1:
+            LCHV = readin.harvard()
+            self.LCHVrec = LCHV.toRecArray()
+            self.rec = self.LCHVrec
+
+        elif self.dataRFrame.get() == 1:
+            LCR = readin.SNrest()
+            self.LCRrec = LCR.toRecArray()
+            self.rec = self.LCRrec
+        self.BandRadioButtons()
 
 
     #Define Checkboxes for the Data Selection
     def DataSelect(self, parent):
-        self.DataFrame = Tk.Frame(bd=1, relief=Tk.SUNKEN, master = self.ButtonFrame)
-        self.DataFrame.grid(row=0,padx=5,pady=5)
+        self.dataHV.set(1)
+        self.dataRFrame.set(1)
         Tk.Checkbutton(self.DataFrame, text="HarvardLC", variable = self.dataHV, command = self.datacheck).grid(row=0,padx=5,pady=5) 
         Tk.Checkbutton(self.DataFrame, text="Restframe", variable = self.dataRFrame, command = self.datacheck).grid(row=1)
 
     def Selection(self):
-        self.ToggleFrame = Tk.Frame(height=2, bd=1, relief=Tk.SUNKEN, master = self.ButtonFrame)
-        self.ToggleFrame.grid(row=1)
         self.toggle.set('Single')
         Tk.Radiobutton(self.ToggleFrame, text="Single", variable = self.toggle,value = "Single", command=self.togglecheck).grid(row=0,padx=5,pady=5)
         Tk.Radiobutton(self.ToggleFrame, text="All", variable=self.toggle, value = "All", command = self.togglecheck).grid(row=1,padx=5,pady=5)
 
     def BandRadioButtons(self):
-        self.RBFrame = Tk.Frame(height=2, bd=1, relief=Tk.SUNKEN, master = self.ButtonFrame)
-        self.RBFrame.grid(row=2,padx=5,pady=5)
         self.band.set("B")
-        Buttons = set(self.rec.band)  #Define the Buttons to be a set of all possible bands
+        try:
+            Buttons = set(self.rec.band)  #Define the Buttons to be a set of all possible bands
+        except AttributeError:
+            Buttons = ['B', 'V', 'R', 'I']
         for i,text in enumerate(Buttons):
             text = Tk.Radiobutton(self.RBFrame, text='Band %s' % text, variable = self.band, value = text,command = self.bandcheck).grid(row=i)
 
     def SplineFitType(self):
-        self.STypeFrame = Tk.Frame(height=2, bd=1, relief=Tk.SUNKEN, master= self.ButtonFrame)  
-        self.STypeFrame.grid(row=3, padx=5, pady=5)
         self.stype.set("UnivariateSpline")
         Tk.Radiobutton(self.STypeFrame, text="Univariate", variable = self.stype, value = "UnivariateSpline", command = self.sftype).grid(row=0,padx=5,pady=5)
         Tk.Radiobutton(self.STypeFrame, text="Splrep", variable = self.stype, value = "splrep", command = self.sftype).grid(row=1,padx=5,pady=5)
+        
+
+    def JSONExport(self):
+        Tk.Button(self.JSONFrame, text="Export current data to JSON", command = self.Export).grid(row=0, padx=5, pady=5)
         
 
     #Define the commands all the Buttons are tied to
@@ -184,6 +194,7 @@ class LCVisualization(Tk.Frame):
     #Start with the Data Selection commands
     def datacheck(self):
         print self.dataHV.get(), " ", self.dataRFrame.get()
+        self.GetData()
 
     def bandcheck(self):
         print self.band.get()
@@ -194,6 +205,13 @@ class LCVisualization(Tk.Frame):
 
     def sftype(self):
         print self.stype.get()
+
+    def Export(self):
+        print "Exporting"
+        f_out = open('SplinedataU', 'w')
+        f_out.write(json.dumps(splinedata, sort_keys=True, indent=4))
+        f_out.close()
+
     
 
 def main():

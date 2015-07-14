@@ -37,7 +37,6 @@ def splinefit(rec, toggle, band):
                 if len(minp) > 0 and minp[0][0] < (banddata.mjd.min() + 25) and minp[0][0] > banddata.mjd.min():
                     
                                             
-                    print flter
                     try: 
                         tck = scinterp.splrep(banddata.mjd, banddata.mag, t = mjd_sampled, w = 1./(banddata.magerr)**2)
                     except:
@@ -56,7 +55,7 @@ def splinefit(rec, toggle, band):
                     splinedata = splinedata - banddata.mag.min()
                                     
                     splinedat.append({'id': filename, 'dataset': 2, 'band': flter, 'splinedata': splinedata.tolist(), 'phase': mjd_20.tolist()})
-    return splinedat
+    return splinedat, len(splinedat)
 
 def Usplinefit(rec, toggle, band):
     splinedat = []
@@ -76,7 +75,6 @@ def Usplinefit(rec, toggle, band):
             banddata = banddata_unsorted[order]
                         
             if len(banddata.mjd) > 6:
-                print 'test'
                 spl = scinterp.UnivariateSpline(banddata.mjd, banddata.mag, k = 1)
                 spl.set_smoothing_factor(0.35)
                 mjd_new = np.linspace(banddata.mjd[0], banddata.mjd[-1], num = 200)
@@ -87,7 +85,7 @@ def Usplinefit(rec, toggle, band):
                 maxp = np.array(maxp)
                 print minp
                 
-                if len(minp) > 0 and minp[0][0] < 10 and minp[0][0] > -5:
+                if len(minp) > 0 and minp[0][0] < banddata.mjd[0] + 40:
                     
                     mjd_new = mjd_new - minp[0][0]
                     banddata.mjd = banddata.mjd - minp[0][0]
@@ -95,12 +93,14 @@ def Usplinefit(rec, toggle, band):
                     mag_new = mag_new - minp[0][1]
                     banddata.mag = banddata.mag - minp[0][1]
                     
-                    #if all(i <= 5 for i in mag_new) and all(i >= -5 for i in mag_new):
-                    splinedat.append({'id': filename, 'dataset': 1, 'band': flter, 'splinedata': mag_new.tolist(), 'phase': mjd_new.tolist(), 'xraw': banddata.mjd, 'yraw': banddata.mag})
+                    if all(i <= 5 for i in mag_new) and all(i >= -5 for i in mag_new):
+                        splinedat.append({'id': filename, 'dataset': 1, 'band': flter, 'splinedata': mag_new.tolist(), 'phase': mjd_new.tolist(), 'xraw': banddata.mjd, 'yraw': banddata.mag})
                 else:
                     splinedat.append({'id': filename, 'dataset': 1, 'band': flter, 'splinedata': [], 'phase': [], 'xraw': banddata.mjd, 'yraw': banddata.mag})
+
     
-    return splinedat
+    
+    return splinedat, len(splinedat)
                
 if __name__ == '__main__':
     sys.exit()
