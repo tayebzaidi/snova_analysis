@@ -76,14 +76,16 @@ def Usplinefit(rec, toggle, band):
             banddata = banddata_unsorted[order]
                         
             if len(banddata.mjd) > 6:
+                print 'test'
                 spl = scinterp.UnivariateSpline(banddata.mjd, banddata.mag, k = 1)
-                spl.set_smoothing_factor(0.15)
+                spl.set_smoothing_factor(0.35)
                 mjd_new = np.linspace(banddata.mjd[0], banddata.mjd[-1], num = 200)
                 mag_new = spl(mjd_new)
                 maxp, minp = peakfinding.peakdetect(mag_new, mjd_new, 5, 0.03)
                 
                 minp = np.array(minp)
                 maxp = np.array(maxp)
+                print minp
                 
                 if len(minp) > 0 and minp[0][0] < 10 and minp[0][0] > -5:
                     
@@ -92,9 +94,12 @@ def Usplinefit(rec, toggle, band):
 
                     mag_new = mag_new - minp[0][1]
                     banddata.mag = banddata.mag - minp[0][1]
-
-                    if all(i <= 5 for i in mag_new) and all(i >= -5 for i in mag_new):
-                        splinedat.append({'id': filename, 'dataset': 2, 'band': flter, 'splinedata': mag_new.tolist(), 'phase': mjd_new.tolist(), 'xraw': banddata.mjd, 'yraw': banddata.mag})
+                    
+                    #if all(i <= 5 for i in mag_new) and all(i >= -5 for i in mag_new):
+                    splinedat.append({'id': filename, 'dataset': 1, 'band': flter, 'splinedata': mag_new.tolist(), 'phase': mjd_new.tolist(), 'xraw': banddata.mjd, 'yraw': banddata.mag})
+                else:
+                    splinedat.append({'id': filename, 'dataset': 1, 'band': flter, 'splinedata': [], 'phase': [], 'xraw': banddata.mjd, 'yraw': banddata.mag})
+    
     return splinedat
                
 if __name__ == '__main__':

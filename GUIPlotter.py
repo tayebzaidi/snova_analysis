@@ -14,6 +14,7 @@ import itertools
 import random
 import os
 import SplineFit
+import readin
 
 if sys.version_info[0] < 3:
     import Tkinter as Tk
@@ -46,15 +47,6 @@ def readin_SNrest():
     magerr = np.fromiter(itertools.chain.from_iterable(magerr), dtype = 'float')
     LC = Lightcurve(objnames, band, mjd, mag, magerr)
     return LC
-
-
-def readin_lcstandard_harvard():
-    path = '.data/lc.standardsystem.sesn_allphot.dat'
-    formatcode = ('|S16,' + '|S16,' + 'f8,' * 3 + '|S16,')
-    data = np.recfromtxt(path, dtype = formatcode, names = ['filename', 'flt', 'mjd', 'mag', 'magerr', 'survey'], case_sensitive = 'lower', invalid_raise = False)
-    data.flt = np.array([x.replace('prime','',1) for x in data.flt.tolist()])
-    
-    return data
 
 class LCVisualization(Tk.Frame):
     def __init__(self, parent):
@@ -113,6 +105,8 @@ class LCVisualization(Tk.Frame):
         self.toolbar.grid(row=2)
         self.toolbar.update()
 
+        self.canvas.mpl_connect('pick_event', self.onPick)         
+
     # Create method Plot to allow for on the fly adjustment of the plotting
     def Plot(self):
         self.ax0.clear()
@@ -124,10 +118,11 @@ class LCVisualization(Tk.Frame):
         for data in splinedat:
                 ydata = data['splinedata']
                 xdata = data['phase'] 
-                xraw = data['xraw']
-                yraw = data['yraw']
+                if self.toggle.get() != "All":
+                    xraw = data['xraw']
+                    yraw = data['yraw']
+                    self.ax0.scatter(xraw, yraw)
                 self.ax0.plot(xdata, ydata)
-                self.ax0.scatter(xraw, yraw)
 
         self.canvas.show()
         
@@ -139,12 +134,18 @@ class LCVisualization(Tk.Frame):
     def showMenu(self, e):
         self.menu.post(e.x_root, e.y_root)
 
+    def onPick(self, event):
+        ind = event.ind
+        print 'onpick3 scatter:', ind, npy.take(x, ind), npy.take(y, ind)
+
     def onExit(self):
         self.quit()
 
     def GetData(self):
-        LC = readin_SNrest() 
-        rec = LC.toRecArray()
+        LCR = readin.SNrest()
+        LCHV = readin.harvard()
+        #LCDES = 
+        rec = LCHV.toRecArray()
         return rec
 
 
