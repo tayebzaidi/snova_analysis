@@ -78,7 +78,7 @@ class LCVisualization(Tk.Frame):
 
         self.frame = Tk.Frame(parent)
         self.frame.grid(row=0,padx=5,pady=5, column = 1)
- 
+
         self.canvas = tkagg.FigureCanvasTkAgg(self.f, master=self.frame)
         self.canvas.get_tk_widget().grid(row=0,padx=5,pady=5)
         self.canvas.show()
@@ -91,21 +91,21 @@ class LCVisualization(Tk.Frame):
     def Plot(self):
         self.ax0.clear()
         if self.stype.get() == "UnivariateSpline":
-            splinedat, length = SplineFit.Usplinefit(self.rec, self.toggle.get(), self.band.get())
+            self.splinedat, length = SplineFit.Usplinefit(self.rec, self.toggle.get(), self.band.get())
         else:
-            splinedat, length = SplineFit.splinefit(self.rec, self.toggle.get(), self.band.get())
-        
-        for data in splinedat:
-                ydata = data['splinedata']
-                xdata = data['phase'] 
+            self.splinedat, length = SplineFit.splinefit(self.rec, self.toggle.get(), self.band.get())
+        for data in self.splinedat:
+                ydata = data['spldata_sampled']
+                xdata = data['mjddata_sampled'] 
+                label = data['stype']
                 if self.toggle.get() != "All":
                     xraw = data['xraw']
                     yraw = data['yraw']
                     self.ax0.scatter(xraw, yraw)
-                line, = self.ax0.plot(xdata, ydata, picker=self.line_picker)
+                line, = self.ax0.plot(xdata, ydata, picker=self.line_picker, label=label)
 
         self.canvas.show()
-        self.f.canvas.mpl_connect('pick_event', self.onPick)         
+        self.f.canvas.mpl_connect('button_press_event', self.onPick)         
         
             
 
@@ -119,19 +119,19 @@ class LCVisualization(Tk.Frame):
         if mouseevent.xdata is None: return False, dict()
         xdata = line.get_xdata()
         ydata = line.get_ydata()
-        maxd = 0.05
+        maxd = 0.0005
         d = np.sqrt((xdata-mouseevent.xdata)**2. + (ydata-mouseevent.ydata)**2.)
         ind = np.nonzero(np.less_equal(d, maxd))
         if len(ind):
             pickx = np.take(xdata, ind)
             picky = np.take(ydata, ind)
-            props = dict(ind=ind, pickx=pickx, picky=picky)
+            props = dict(ind=ind, pickx=pickx, picky=picky, label=line._label)
             return True, props
         else:
             return False, dict()
 
     def onPick(self, event):
-        print('onpick line', event.pickx, event.picky)
+        print('onpick line', event.label)
 
     def onExit(self):
         self.quit()
@@ -173,7 +173,10 @@ class LCVisualization(Tk.Frame):
     def BandRadioButtons(self):
         self.band.set("B")
         try:
+            Buttons_tmp = set(self.rec.band)
+            
             Buttons = set(self.rec.band)  #Define the Buttons to be a set of all possible bands
+            
         except AttributeError:
             Buttons = ['B', 'V', 'R', 'I']
         for i,text in enumerate(Buttons):
@@ -198,6 +201,7 @@ class LCVisualization(Tk.Frame):
 
     def bandcheck(self):
         print self.band.get()
+        self.Plot()
 
     def togglecheck(self):
         print self.toggle.get()
@@ -209,8 +213,9 @@ class LCVisualization(Tk.Frame):
     def Export(self):
         print "Exporting"
         f_out = open('SplinedataU', 'w')
-        f_out.write(json.dumps(splinedata, sort_keys=True, indent=4))
+        f_out.write(json.dumps(self.splinedat, sort_keys=True, indent=4))
         f_out.close()
+        print "Done Exporting"
 
     
 
