@@ -55,7 +55,7 @@ def harvard():
     path = './data/lc.standardsystem.sesn_allphot.dat'
     formatcode = ('|S16,' + '|S16,' + 'f8,' * 3 + '|S16,')
     data = np.recfromtxt(path, dtype = formatcode, names = ['name', 'band', 'mjd', 'mag', 'magerr', 'survey'], case_sensitive = 'lower', invalid_raise = False)
-    data.band = np.array([x.replace('prime','',1) for x in data.band.tolist()])
+    data.band = np.array(x.upper() for x in data.band)
     stype = np.full(len(data.name), 2)
     LC = Lightcurve(data.name, data.band, data.mjd, data.mag, data.magerr, stype)
     return LC
@@ -66,7 +66,7 @@ def DESnoHOSTZ():
     path = './data/DES_BLINDnoHOSTZ/'
     filenames = os.listdir(path)
     pattern = re.compile('DES_SN[01]\d+.DAT')
-    for i in range(filenames):
+    for i in range(len(filenames) - 3):
         if pattern.search(filenames[i]) == None:
             filenames.pop(i)
     print filenames
@@ -78,11 +78,11 @@ def DESnoHOSTZ():
                 if lookup in line:
                     linenum = num    
                     break
-        data = np.recfromtxt(os.path.join(path, filename), names = True, case_sensitive = 'lower', invalid_raise = False, usecols = range(num))
+        data = np.recfromtxt(os.path.join(path, filename), names = True, skip_header = linenum + 1, skip_footer = 1, case_sensitive = 'lower', invalid_raise = False, usecols = np.arange(num))
         
     
 
 if __name__=='__main__':
     SNrest()
-    harvard()
+    DESnoHOSTZ()
     sys.exit()
