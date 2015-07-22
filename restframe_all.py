@@ -182,7 +182,7 @@ def main2(splinedat):
                 mag_new = spl(phase_new)
                 print spl(phase_new[1])
                 '''
-                '''
+                
                 if prnt == True:
                     fig = plt.figure(figsize = (12,12))
                     ax = fig.add_subplot(1,1,1)
@@ -201,7 +201,7 @@ def main2(splinedat):
                         
                     plt.gca().invert_yaxis()
                     plt.show(fig)
-                    '''
+                    
     
     f_out = open('SplineDatarestImproved', 'w')
     f_out.write(json.dumps(splinedat, sort_keys=True, indent=4))
