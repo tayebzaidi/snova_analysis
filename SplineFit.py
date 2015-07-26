@@ -81,14 +81,18 @@ def Usplinefit(rec, toggle, band):
         filenames = [filenames[1]]
 
     for filename in filenames:
+        print filename
+        print band
+        print rec.mag
+        print rec.mjd
         filters = [band]
         #filters = np.unique((rec.band))
         for flter in filters:
             idx = np.where((rec.band == flter) & (rec.name == filename))
+            print idx
             banddata_unsorted = rec[idx]
             order = np.argsort(banddata_unsorted.mjd)
             banddata = banddata_unsorted[order]
- 
             if len(banddata.mjd) > 6:
                 #_, var = moving_average()
                 #print filename
@@ -133,10 +137,11 @@ def Usplinefit(rec, toggle, band):
 
                         if all(i <= 5 for i in mag_new) and all(i >= -0.1 for i in mag_new):
                             splinedat.append({'id': filename, 'stype': stype, 'band': flter, 'splinedata': mag_new.tolist(), 'phase': mjd_new.tolist(), 'xraw': banddata.mjd.tolist(), 'yraw': banddata.mag.tolist(), 'spldata_sampled': mag_sampled.tolist(), 'mjddata_sampled': mjd_sampled.tolist()})
-                    #else:
-                    #    splinedat.append({'id': filename, 'stype': stype, 'band': flter, 'splinedata': mag_new.tolist(), 'phase': mjd_new.tolist(), 'xraw': banddata.mjd.tolist(), 'yraw': banddata.mag.tolist()})
-                    #else:
-                #    splinedat.append({'id': filename, 'stype': banddata.stype.tolist(), 'band': flter, 'splinedata': [], 'phase': [], 'xraw': banddata.mjd.tolist(), 'yraw': banddata.mag.tolist()})
+#                    else:
+#                        splinedat.append({'id': filename, 'stype': stype, 'band': flter, 'splinedata': mag_new.tolist(), 'phase': mjd_new.tolist(), 'xraw': banddata.mjd.tolist(), 'yraw': banddata.mag.tolist()})
+#                        print(banddata.mjd.tolist(), banddata.mag.tolist())
+#                else:
+#                    splinedat.append({'id': filename, 'stype': banddata.stype.tolist(), 'band': flter, 'splinedata': [], 'phase': [], 'xraw': banddata.mjd.tolist(), 'yraw': banddata.mag.tolist()})
             else:
                 print "Insufficient Data"
     

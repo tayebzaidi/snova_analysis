@@ -53,14 +53,15 @@ class LCVisualization(Tk.Frame):
         #initialize variables here
         self.dataHV = Tk.IntVar()
         self.dataRFrame = Tk.IntVar()
+        self.dataDESnoZ = Tk.IntVar()
         self.band = Tk.StringVar()
         self.toggle = Tk.StringVar()
         self.stype = Tk.StringVar()
 
+        self.DataSelect(parent)
         self.GetData()
 
         self.initFigure(parent)
-        self.DataSelect(parent)
         self.SplineFitType()
         self.Selection()
         self.JSONExport()
@@ -102,10 +103,11 @@ class LCVisualization(Tk.Frame):
                     xraw = data['xraw']
                     yraw = data['yraw']
                     self.ax0.scatter(xraw, yraw)
-                line, = self.ax0.plot(xdata, ydata, picker=self.line_picker, label=label)
+                #line, = self.ax0.plot(xdata, ydata, picker=self.line_picker, label=label)
+                self.ax0.plot(xdata, ydata)
 
         self.canvas.show()
-        self.f.canvas.mpl_connect('button_press_event', self.onPick)         
+        #self.f.canvas.mpl_connect('button_press_event', self.onPick)         
         
             
 
@@ -130,20 +132,27 @@ class LCVisualization(Tk.Frame):
         else:
             return False, dict()
 
-    def onPick(self, event):
-        print('onpick line', event.label)
+    #def onPick(self, event):
+    #    print('onpick line', event.label)
 
     def onExit(self):
         self.quit()
 
     def GetData(self):
-        if self.dataHV.get() * self.dataRFrame.get() == 1:
+        if self.dataHV.get() * self.dataRFrame.get() * self.dataDESnoZ.get() == 1:
             LCR = readin.SNrest()
             LCHV = readin.harvard()
             self.LCRrec = LCR.toRecArray()
             self.LCHVrec = LCHV.toRecArray()
             LC = LightcurveClass.combine2(self.LCHVrec, self.LCRrec)
-            print LC
+            self.rec = LC
+
+        elif self.dataHV.get() * self.dataRFrame.get() == 1:
+            LCR = readin.SNrest()
+            LCHV = readin.harvard()
+            self.LCRrec = LCR.toRecArray()
+            self.LCHVrec = LCHV.toRecArray()
+            LC = LightcurveClass.combine2(self.LCHVrec, self.LCRrec)
             self.rec = LC
 
         elif self.dataHV.get() == 1:
@@ -155,6 +164,11 @@ class LCVisualization(Tk.Frame):
             LCR = readin.SNrest()
             self.LCRrec = LCR.toRecArray()
             self.rec = self.LCRrec
+
+        elif self.dataDESnoZ.get() == 1:
+            LCDES = readin.DESnoHOSTZ()
+            LCDESrec = LCDES.toRecArray()
+            self.rec = LCDESrec
         self.BandRadioButtons()
 
 
@@ -162,8 +176,11 @@ class LCVisualization(Tk.Frame):
     def DataSelect(self, parent):
         self.dataHV.set(1)
         self.dataRFrame.set(1)
+        self.dataDESnoZ.set(0)
         Tk.Checkbutton(self.DataFrame, text="HarvardLC", variable = self.dataHV, command = self.datacheck).grid(row=0,padx=5,pady=5) 
         Tk.Checkbutton(self.DataFrame, text="Restframe", variable = self.dataRFrame, command = self.datacheck).grid(row=1)
+        Tk.Checkbutton(self.DataFrame, text="DESnoHOSTZ", variable = self.dataDESnoZ, command = self.datacheck).grid(row=2)
+        
 
     def Selection(self):
         self.toggle.set('Single')
