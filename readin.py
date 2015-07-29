@@ -4,7 +4,36 @@ from LightcurveClass import Lightcurve
 import sys
 import os
 import re
+import cPickle as pickle
         
+'''
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        """
+        if input object is a ndarray it will be converted into a dict holding dtype, shape and the data base64 encoded
+        """
+        if isinstance(obj, np.ndarray):
+            data_b64 = base64.b64encode(obj.data)
+            return dict(__ndarray__=data_b64,
+                        dtype=str(obj.dtype),
+                        shape=obj.shape)
+        # Let the base class default method raise the TypeError
+        return json.JSONEncoder(self, obj)
+
+def json_numpy_obj_hook(dct):
+    """
+    Decodes a previously encoded numpy ndarray
+    with proper shape and dtype
+    :param dct: (dict) json encoded ndarray
+    :return: (ndarray) if input was an encoded ndarray
+    """
+    if isinstance(dct, dict) and '__ndarray__' in dct:
+        data = base64.b64decode(dct['__ndarray__'])
+        return np.frombuffer(data, dct['dtype']).reshape(dct['shape'])
+    return dct
+'''
+
+
 
 def readin_aavso(filename):
     formatcode = ('f8,'*4 + '|S16,'*20).rstrip(',')
@@ -35,6 +64,7 @@ def SNrest():
         name = np.empty(len(data.band), dtype = 'S20')
         name.fill(filename)
         objnames.append(name)
+        data.band = [x.lower() for x in data.band]
         band.append(data.band)
         mjd.append(data.phase)
         mag.append(data.mag)
@@ -55,34 +85,133 @@ def harvard():
     path = './data/lc.standardsystem.sesn_allphot.dat'
     formatcode = ('|S16,' + '|S16,' + 'f8,' * 3 + '|S16,')
     data = np.recfromtxt(path, dtype = formatcode, names = ['name', 'band', 'mjd', 'mag', 'magerr', 'survey'], case_sensitive = 'lower', invalid_raise = False)
-    data.band = np.array(x.upper() for x in data.band)
+    data.band = np.array([x.lower() for x in data.band])
     stype = np.full(len(data.name), 2)
     LC = Lightcurve(data.name, data.band, data.mjd, data.mag, data.magerr, stype)
     return LC
 
-def DESnoHOSTZ():
-    lookup = 'NVAR'
-    objnames, band, mjd, mag, magerr = [],[],[],[],[]
-    path = './data/DES_BLINDnoHOSTZ/'
-    filenames = os.listdir(path)
-    pattern = re.compile('DES_SN[01]\d+.DAT')
-    for i in range(len(filenames) - 3):
-        if pattern.search(filenames[i]) == None:
-            filenames.pop(i)
-    print filenames
-    linenum = 16
-    
-    for filename in filenames:
-        with open(os.path.join(path,filename), 'r') as lcurvefile:
-            for num, line in enumerate(lcurvefile):
-                if lookup in line:
-                    linenum = num    
-                    break
-        data = np.recfromtxt(os.path.join(path, filename), names = True, skip_header = linenum + 1, skip_footer = 1, case_sensitive = 'lower', invalid_raise = False, usecols = np.arange(num))
+
+def DESplusHOSTZ():
+
+    try:
+        DESplusHOSTZ = pickle.load( open( "DESplusHOSTZ_pdump", "rb"))
+        print DESplusHOSTZ.toRecArray()
+        return DESplusHOSTZ
+    except:
+
+        lookup = 'NVAR'
+        objnames, band, mjd, mag, magerr = [],[],[],[],[] 
+        path = './data/DES_BLIND+HOSTZ/'
+        filenames = os.listdir(path)
+                
+        linenum = 16
         
-    
+        #initialize data structure to store the data
+        
+
+        lookup = [3730,4490,4760,4810]
+        for filename in filenames:
+            if filename.endswith('.DAT'):
+                data = np.recfromtxt(os.path.join(path, filename), usecols = (1,2,4,5), names = ['mjd', 'band', 'mag', 'err'], skip_header = 19, skip_footer = 1, case_sensitive = 'lower', invalid_raise = False)
+                name = np.empty(len(data.band), dtype = 'S20')
+                name.fill(filename)
+                '''
+                #convert flux to magnitude
+                for i, flt in enumerate(data.band):
+                    if flt == 'g':
+                        print data.mag[i], ' ',
+                        print data.err[i]
+                        data.mag[i] = np.log10(data.mag[i] / 3730.) * -2.5
+                        data.err[i] = np.log10(data.err[i] / 3730.) * -2.5
+                    if flt == 'r':
+                        data.mag[i] = np.log10(data.mag[i] / 4490.) * -2.5
+                        data.err[i] = np.log10(data.err[i] / 4490.) * -2.5
+                    if flt == 'i':
+                        data.mag[i] = np.log10(data.mag[i] / 4760.) * -2.5
+                        data.err[i] = np.log10(data.err[i] / 4760.) * -2.5
+                    if flt == 'z':
+                        data.mag[i] = np.log10(data.mag[i] / 4810.) * -2.5
+                        data.err[i] = np.log10(data.err[i] / 4810.) * -2.5
+                '''
+                objnames.append(name)
+                band.append(data.band)
+                mjd.append(data.mjd)
+                 
+                mag.append(data.mag)
+                magerr.append(data.err)
+         
+        objnames = np.fromiter(itertools.chain.from_iterable(objnames), dtype = 'S20')
+        band = np.fromiter(itertools.chain.from_iterable(band), dtype = 'S16')
+        mjd = np.fromiter(itertools.chain.from_iterable(mjd), dtype = 'float')
+        mag = np.fromiter(itertools.chain.from_iterable(mag), dtype = 'float')
+        magerr = np.fromiter(itertools.chain.from_iterable(magerr), dtype = 'float')
+        stype = np.full(len(objnames), 1)
+        LC = Lightcurve(objnames, band, mjd, mag, magerr, stype)
+        pickle.dump( LC, open("DESplusHOSTZ_pdump", "wb"))
+        DESplusHOSTZ()
+
+def DESnoHOSTZ():
+
+    try:
+        DESnoHOSTZ = pickle.load( open( "DESnoHOSTZ_pdump", "rb"))
+        print DESnoHOSTZ.toRecArray()
+        return DESnoHOSTZ
+    except:
+
+        lookup = 'NVAR'
+        objnames, band, mjd, mag, magerr = [],[],[],[],[] 
+        path = './data/DES_BLINDnoHOSTZ/'
+        filenames = os.listdir(path)
+                
+        linenum = 16
+        
+        #initialize data structure to store the data
+        
+
+        lookup = [3730,4490,4760,4810]
+        for filename in filenames:
+            if filename.endswith('.DAT'):
+                data = np.recfromtxt(os.path.join(path, filename), usecols = (1,2,4,5), names = ['mjd', 'band', 'mag', 'err'], skip_header = 19, skip_footer = 1, case_sensitive = 'lower', invalid_raise = False)
+                name = np.empty(len(data.band), dtype = 'S20')
+                name.fill(filename)
+                '''
+                #convert flux to magnitude
+                for i, flt in enumerate(data.band):
+                    if flt == 'g':
+                        print data.mag[i], ' ',
+                        print data.err[i]
+                        data.mag[i] = np.log10(data.mag[i] / 3730.) * -2.5
+                        data.err[i] = np.log10(data.err[i] / 3730.) * -2.5
+                    if flt == 'r':
+                        data.mag[i] = np.log10(data.mag[i] / 4490.) * -2.5
+                        data.err[i] = np.log10(data.err[i] / 4490.) * -2.5
+                    if flt == 'i':
+                        data.mag[i] = np.log10(data.mag[i] / 4760.) * -2.5
+                        data.err[i] = np.log10(data.err[i] / 4760.) * -2.5
+                    if flt == 'z':
+                        data.mag[i] = np.log10(data.mag[i] / 4810.) * -2.5
+                        data.err[i] = np.log10(data.err[i] / 4810.) * -2.5
+                '''
+                objnames.append(name)
+                band.append(data.band)
+                mjd.append(data.mjd)
+                 
+                mag.append(data.mag)
+                magerr.append(data.err)
+         
+        objnames = np.fromiter(itertools.chain.from_iterable(objnames), dtype = 'S20')
+        band = np.fromiter(itertools.chain.from_iterable(band), dtype = 'S16')
+        mjd = np.fromiter(itertools.chain.from_iterable(mjd), dtype = 'float')
+        mag = np.fromiter(itertools.chain.from_iterable(mag), dtype = 'float')
+        magerr = np.fromiter(itertools.chain.from_iterable(magerr), dtype = 'float')
+        stype = np.full(len(objnames), 1)
+        LC = Lightcurve(objnames, band, mjd, mag, magerr, stype)
+        pickle.dump( LC, open("DESnoHOSTZ_pdump", "wb"))
+        DESnoHOSTZ()
+        
+
 
 if __name__=='__main__':
-    SNrest()
-    DESnoHOSTZ()
+    
+    DESnplusHOSTZ()
     sys.exit()

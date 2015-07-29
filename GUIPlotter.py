@@ -53,17 +53,18 @@ class LCVisualization(Tk.Frame):
         #initialize variables here
         self.dataHV = Tk.IntVar()
         self.dataRFrame = Tk.IntVar()
+        self.dataDESnoZ = Tk.IntVar()
         self.band = Tk.StringVar()
         self.toggle = Tk.StringVar()
         self.stype = Tk.StringVar()
 
+        self.DataSelect(parent)
         self.GetData()
 
         self.initFigure(parent)
-        self.DataSelect(parent)
         self.SplineFitType()
         self.Selection()
-        self.JSONExport()
+        self.Misc()
 
 
         # This is where I begin the matplotlib code first initializing the Figure 
@@ -90,22 +91,39 @@ class LCVisualization(Tk.Frame):
     # Create method Plot to allow for on the fly adjustment of the plotting
     def Plot(self):
         self.ax0.clear()
-        if self.stype.get() == "UnivariateSpline":
-            self.splinedat, length = SplineFit.Usplinefit(self.rec, self.toggle.get(), self.band.get())
-        else:
-            self.splinedat, length = SplineFit.splinefit(self.rec, self.toggle.get(), self.band.get())
+        print self.splinedat
         for data in self.splinedat:
+            if data['band'] == self.band.get():
+                minp = np.array(data['min'])
+                maxp = np.array(data['max']) 
                 ydata = data['spldata_sampled']
                 xdata = data['mjddata_sampled'] 
                 label = data['stype']
                 if self.toggle.get() != "All":
                     xraw = data['xraw']
                     yraw = data['yraw']
-                    self.ax0.scatter(xraw, yraw)
-                line, = self.ax0.plot(xdata, ydata, picker=self.line_picker, label=label)
+                    
+                    if minp.size > 0:
+                        self.ax0.scatter(np.array(data['min'])[:,0], np.array(data['min'])[:,1], color='blue')
+                    if maxp.size > 0:
+                        self.ax0.scatter(np.array(data['max'])[:,0], np.array(data['max'])[:,1], color='red')
+                    self.ax0.errorbar(xraw, yraw, yerr=data['magerr'],fmt='o')
+                #line, = self.ax0.plot(xdata, ydata, picker=self.line_picker, label=label)
+                self.ax0.plot(xdata, ydata)
+                ydata = data['splinedata']
+                xdata = data['phase']
+                #yraw = data['yraw']
+                #xraw = data['xraw']
+                print data['min']
+                print data['max']
+                #self.ax0.scatter(data[minp][:,0], minp[:,1], color='blue')
+                #self.ax0.scatter(maxp[:,0], maxp[:,1], color='red')
+                self.ax0.plot(xdata, ydata)
+                #self.ax0.errorbar(xraw, yraw, yerr=data['magerr'], fmt='o')
+                   
 
         self.canvas.show()
-        self.f.canvas.mpl_connect('button_press_event', self.onPick)         
+        #self.f.canvas.mpl_connect('button_press_event', self.onPick)         
         
             
 
@@ -130,20 +148,27 @@ class LCVisualization(Tk.Frame):
         else:
             return False, dict()
 
-    def onPick(self, event):
-        print('onpick line', event.label)
+    #def onPick(self, event):
+    #    print('onpick line', event.label)
 
     def onExit(self):
         self.quit()
 
     def GetData(self):
-        if self.dataHV.get() * self.dataRFrame.get() == 1:
+        if self.dataHV.get() * self.dataRFrame.get() * self.dataDESnoZ.get() == 1:
             LCR = readin.SNrest()
             LCHV = readin.harvard()
             self.LCRrec = LCR.toRecArray()
             self.LCHVrec = LCHV.toRecArray()
             LC = LightcurveClass.combine2(self.LCHVrec, self.LCRrec)
-            print LC
+            self.rec = LC
+
+        elif self.dataHV.get() * self.dataRFrame.get() == 1:
+            LCR = readin.SNrest()
+            LCHV = readin.harvard()
+            self.LCRrec = LCR.toRecArray()
+            self.LCHVrec = LCHV.toRecArray()
+            LC = LightcurveClass.combine2(self.LCHVrec, self.LCRrec)
             self.rec = LC
 
         elif self.dataHV.get() == 1:
@@ -155,20 +180,36 @@ class LCVisualization(Tk.Frame):
             LCR = readin.SNrest()
             self.LCRrec = LCR.toRecArray()
             self.rec = self.LCRrec
+
+        elif self.dataDESnoZ.get() == 1:
+            LCDES = readin.DESnoHOSTZ()
+            LCDESrec = LCDES.toRecArray()
+            self.rec = LCDESrec
         self.BandRadioButtons()
 
+    def PullData(self):
+        if self.stype.get() == "UnivariateSpline":
+            self.splinedat, length = SplineFit.Usplinefit(self.rec, self.toggle.get(), self.band.get())
+        elif self.stype.get() == "nonparam":
+            self.splinedat, length = SplineFit.NonParam(self.rec, self.toggle.get(), self.band.get()) 
+        else:
+            self.splinedat, length = SplineFit.splinefit(self.rec, self.toggle.get(), self.band.get())
 
     #Define Checkboxes for the Data Selection
     def DataSelect(self, parent):
         self.dataHV.set(1)
         self.dataRFrame.set(1)
+        self.dataDESnoZ.set(0)
         Tk.Checkbutton(self.DataFrame, text="HarvardLC", variable = self.dataHV, command = self.datacheck).grid(row=0,padx=5,pady=5) 
         Tk.Checkbutton(self.DataFrame, text="Restframe", variable = self.dataRFrame, command = self.datacheck).grid(row=1)
+        Tk.Checkbutton(self.DataFrame, text="DESnoHOSTZ", variable = self.dataDESnoZ, command = self.datacheck).grid(row=2)
+        
 
     def Selection(self):
         self.toggle.set('Single')
         Tk.Radiobutton(self.ToggleFrame, text="Single", variable = self.toggle,value = "Single", command=self.togglecheck).grid(row=0,padx=5,pady=5)
         Tk.Radiobutton(self.ToggleFrame, text="All", variable=self.toggle, value = "All", command = self.togglecheck).grid(row=1,padx=5,pady=5)
+        Tk.Radiobutton(self.ToggleFrame, text="Thirty", variable = self.toggle, value = "Thirty", command = self.togglecheck).grid(row=2,padx=5,pady=5)
 
     def BandRadioButtons(self):
         self.band.set("B")
@@ -186,10 +227,12 @@ class LCVisualization(Tk.Frame):
         self.stype.set("UnivariateSpline")
         Tk.Radiobutton(self.STypeFrame, text="Univariate", variable = self.stype, value = "UnivariateSpline", command = self.sftype).grid(row=0,padx=5,pady=5)
         Tk.Radiobutton(self.STypeFrame, text="Splrep", variable = self.stype, value = "splrep", command = self.sftype).grid(row=1,padx=5,pady=5)
+        Tk.Radiobutton(self.STypeFrame, text="NonParam", variable = self.stype, value = "nonparam", command = self.sftype).grid(row=2,padx=5,pady=5)
         
 
-    def JSONExport(self):
+    def Misc(self):
         Tk.Button(self.JSONFrame, text="Export current data to JSON", command = self.Export).grid(row=0, padx=5, pady=5)
+        Tk.Button(self.JSONFrame, text="Plot data", command = self.plot).grid(row=1, padx=5, pady=5)
         
 
     #Define the commands all the Buttons are tied to
@@ -201,14 +244,19 @@ class LCVisualization(Tk.Frame):
 
     def bandcheck(self):
         print self.band.get()
-        self.Plot()
+        #self.Plot()
 
     def togglecheck(self):
         print self.toggle.get()
-        self.Plot()
+        #self.Plot()
 
     def sftype(self):
         print self.stype.get()
+        self.PullData()
+
+    def plot(self):
+        print 'Plotting'
+        self.Plot()
 
     def Export(self):
         print "Exporting"
