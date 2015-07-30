@@ -25,13 +25,18 @@ class Optimizer(object):
 
     def GOF(self, x): #Goodness of Fit Metric for determining whether spline needs to be
         if x < 0: x = 0
-        #print x
+        print x
         self.spline.set_smoothing_factor(x)
-        if np.isnan(self.spline(self.mjd[1])):
-            self.spline.set_smoothing_factor(x + 5)
+        #if np.isnan(self.spline(self.mjd[1])):
+        #    self.spline.set_smoothing_factor(x + 5)
             #print 'test'
         chi_sum = 0
-        
+        smooth_sum = 0
+        q = 0.00004
+        """
+        Using model to control goodness of fit and smoothness
+        combining second derivative and chi-squared
+        """
         for i in xrange(len(self.mjd)):
             square = (self.mag[i] - self.spline(self.mjd[i]))**2
             if np.isnan(self.spline(self.mjd[i])):
@@ -56,23 +61,25 @@ class Optimizer(object):
 
                 dslope = (dy2/dx2 - dy1/dx1 ) * 10**(2)
 
-                chi_sum += (square / sigma) + (np.abs(dslope)) **2
+                chi_sum += (square / sigma)# + (np.abs(dslope)) **2
+                smooth_sum += (abs(dslope)) ** 2
                 ##print dslope, chi_sum, square, sigma
             else:
                 chi_sum += (square / sigma)
                 ##print chi_sum, square, sigma, self.spline(self.mjd[i])       
         
         chi_sum = chi_sum / len(self.mjd)
+        total_sum = (1-q)* chi_sum + q * (smooth_sum)
         #print(chi_sum)
-        return chi_sum
+        return total_sum
 
     def optimize(self):
         x0 = [self.guess]
         res = minimize(self.GOF, x0, method='Nelder-Mead',options={'gtol': 0.01, 'maxiter': 100, 'disp': True})
         #res = minimize(self.GOF, x0, method='SLSQP', jac = False, bounds = ((0.01,None),), options={'ftol': 1, 'eps': 0.1, 'maxiter': 100}) 
         #res = minimize(self.GOF, x0, method='L-BFGS-B', jac = False, bounds = ((0,None),), options={'maxiter': 100}) 
-        #print(res.x)
-        #print(res.message) 
+        print(res.x)
+        print(res.message) 
         return res.x
 
 
@@ -120,8 +127,6 @@ def Supersmoother(rec, toggle, band):
     for filename in filenames:
         print filename
         print band
-        print rec.mag
-        print rec.mjd
         filters = [band]
         #filters = np.unique((rec.band))
         for flter in filters:
@@ -140,14 +145,14 @@ def Supersmoother(rec, toggle, band):
                 w = 1./(banddata.magerr) ** 2 
                 stype = banddata.stype[1]
                 try:
-                    model = SuperSmoother(alpha = 8)
+                    model = SuperSmoother(alpha = 10)
                     model.fit(banddata.mjd, banddata.mag, w)
                     
                     mjd_fit = np.linspace(banddata.mjd[0], banddata.mjd[-1], 1000)
                     mag_fit = model.predict(mjd_fit)
                     
-                    print "Peak to Peak 1%", np.ptp(mag_fit) * 0.01
-                    maxp, minp = peakfinding.peakdetect(mag_fit, mjd_fit, 5, np.ptp(mag_fit) * 0.1)
+                    print "Peak to Peak 1%", np.ptp(mag_fit) * 0.1
+                    maxp, minp = peakfinding.peakdetect(mag_fit, mjd_fit, 5, np.ptp(mag_fit) * 0.3)
                     minp, maxp = np.array(minp), np.array(maxp)
                 except ValueError:
                     break 
@@ -179,7 +184,14 @@ def Supersmoother(rec, toggle, band):
  
 def Usplinefit(rec, toggle, band):
     splinedat = []
+    # Convert rec to dict data structure
+
+   
+
     filenames = np.unique(rec.name).tolist()
+
+    #for filename in filenames:
+    #    datastruct = 
     random.shuffle(filenames)
 
     if toggle == "Single":
@@ -190,8 +202,6 @@ def Usplinefit(rec, toggle, band):
     for filename in filenames:
         print filename
         print band
-        print rec.mag
-        print rec.mjd
         #filters = [band]
         filters = np.unique((rec.band))
         for flter in filters:
@@ -210,21 +220,21 @@ def Usplinefit(rec, toggle, band):
                 #print 'This is the spline data after fixing smoothing param: ', spl.get_knots()
                 #print 'This is the spline data after fixing smoothing param: ', spl.get_knots()
                 
-                #opt = Optimizer(banddata.mjd, banddata.mag, banddata.magerr,  spl, len(w))                
+                opt = Optimizer(banddata.mjd, banddata.mag, banddata.magerr,  spl, 0.2)                
         
-                #smoothing_num = opt.optimize()
-                #if smoothing_num < 0: smoothing_num = 0.35
-                #spl.set_smoothing_factor(smoothing_num)               
-                spl.set_smoothing_factor(0.3)               
+                smoothing_num = opt.optimize()
+                if smoothing_num < 0: smoothing_num = 0.35
+                spl.set_smoothing_factor(smoothing_num)               
+                #spl.set_smoothing_factor(0.3)               
             
-                #print smoothing_num
+                print smoothing_num
 
                 mjd_new = np.linspace(banddata.mjd[0], banddata.mjd[-1], num = 200)
                 mag_new = spl(mjd_new)
                 print mag_new
-                print "Peak to Peak 10% ", np.ptp(mag_new) * 0.01
+                print "Peak to Peak 10% ", np.ptp(mag_new) * 0.3
                 try:
-                    maxp, minp = peakfinding.peakdetect(mag_new, mjd_new, 5, np.ptp(mag_new)*0.1)
+                    maxp, minp = peakfinding.peakdetect(mag_new, mjd_new, 5, np.ptp(mag_new)*0.3)
                 except:
                     maxp, minp = np.array([]), np.array([])
                 minp = np.array(minp)
