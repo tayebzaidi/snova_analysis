@@ -159,7 +159,7 @@ def DESnoHOSTZ():
     except:
 
         lookup = 'NVAR'
-        objnames, band, mjd, mag, magerr = [],[],[],[],[] 
+        objnames, band, mjd, mag, magerr,stype = [],[],[],[],[],[] 
         path = './data/DES_BLINDnoHOSTZ/'
         filenames = os.listdir(path)
                 
@@ -167,13 +167,23 @@ def DESnoHOSTZ():
         
         #initialize data structure to store the data
         
+        stype_txt = np.recfromtxt('./data/TEST+HOST.KEY', usecols = (1,2,3,4,5,6), names = ['cid', 'gentype', 'sntype', 'genz', 'hostz', 'hostzerr'], skip_header = 2, case_sensitive = 'lower', invalid_raise = False)
 
         lookup = [3730,4490,4760,4810]
         for filename in filenames:
             if filename.endswith('.DAT'):
                 data = np.recfromtxt(os.path.join(path, filename), usecols = (1,2,4,5), names = ['mjd', 'band', 'mag', 'err'], skip_header = 19, skip_footer = 1, case_sensitive = 'lower', invalid_raise = False)
-                name = np.empty(len(data.band), dtype = 'S20')
+                name = np.zeros(len(data.band), dtype = 'S20')
+                sntype = np.zeros(len(data.band), dtype = '=i4')
+                idx = np.where(stype_txt.cid == filename[6:-4].lstrip('0'))#get rid of fluff around filename to get cid
+                if len(idx[0]) != 0:
+                    sntype_tmp = np.asscalar(stype_txt.sntype[idx])
+                    sntype_tmp = int(sntype_tmp)
+                else:
+                    sntype_tmp = -9
+                    
                 name.fill(filename)
+                sntype.fill(sntype_tmp)
                 '''
                 #convert flux to magnitude
                 for i, flt in enumerate(data.band):
@@ -195,17 +205,22 @@ def DESnoHOSTZ():
                 objnames.append(name)
                 band.append(data.band)
                 mjd.append(data.mjd)
-                 
+                stype.append(sntype)
                 mag.append(data.mag)
                 magerr.append(data.err)
          
         objnames = np.fromiter(itertools.chain.from_iterable(objnames), dtype = 'S20')
+        stype = np.fromiter(itertools.chain.from_iterable(stype), dtype = 'S20')
         band = np.fromiter(itertools.chain.from_iterable(band), dtype = 'S16')
         mjd = np.fromiter(itertools.chain.from_iterable(mjd), dtype = 'float')
         mag = np.fromiter(itertools.chain.from_iterable(mag), dtype = 'float')
         magerr = np.fromiter(itertools.chain.from_iterable(magerr), dtype = 'float')
-        stype = np.full(len(objnames), 1)
+
+        
+            
+        print set(stype)
         LC = Lightcurve(objnames, band, mjd, mag, magerr, stype)
+        print stype[1000], ' ', objnames[1000], band[1000]
         pickle.dump( LC, open("DESnoHOSTZ_pdump", "wb"))
         DESnoHOSTZ()
         
@@ -213,5 +228,5 @@ def DESnoHOSTZ():
 
 if __name__=='__main__':
     
-    DESnplusHOSTZ()
+    DESnoHOSTZ()
     sys.exit()
