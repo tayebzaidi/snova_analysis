@@ -177,7 +177,7 @@ def DESnoHOSTZ():
                 sntype = np.zeros(len(data.band), dtype = '=i4')
                 idx = np.where(stype_txt.cid == filename[6:-4].lstrip('0'))#get rid of fluff around filename to get cid
                 if len(idx[0]) != 0:
-                    sntype_tmp = np.asscalar(stype_txt.sntype[idx])
+                    sntype_tmp = np.asscalar(stype_txt.gentype[idx])
                     sntype_tmp = int(sntype_tmp)
                 else:
                     sntype_tmp = -9
@@ -219,7 +219,12 @@ def DESnoHOSTZ():
         
             
         print set(stype)
+        setofsn = list(set(stype))
+        for i in range(len(setofsn)):
+            idx = np.where(stype == setofsn[i])
+            print 'Type {} has length'.format(i), len(stype[idx])
         LC = Lightcurve(objnames, band, mjd, mag, magerr, stype)
+       
         print stype[1000], ' ', objnames[1000], band[1000]
         pickle.dump( LC, open("DESnoHOSTZ_pdump", "wb"))
         DESnoHOSTZ()

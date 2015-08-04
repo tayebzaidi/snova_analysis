@@ -25,7 +25,7 @@ class Optimizer(object):
 
     def GOF(self, x): #Goodness of Fit Metric for determining whether spline needs to be
         if x < 0: x = 0
-        print x
+        #print x
         self.spline.set_smoothing_factor(x)
         #if np.isnan(self.spline(self.mjd[1])):
         #    self.spline.set_smoothing_factor(x + 5)
@@ -78,8 +78,8 @@ class Optimizer(object):
         res = minimize(self.GOF, x0, method='Nelder-Mead',options={'gtol': 0.01, 'maxiter': 100, 'disp': True})
         #res = minimize(self.GOF, x0, method='SLSQP', jac = False, bounds = ((0.01,None),), options={'ftol': 1, 'eps': 0.1, 'maxiter': 100}) 
         #res = minimize(self.GOF, x0, method='L-BFGS-B', jac = False, bounds = ((0,None),), options={'maxiter': 100}) 
-        print(res.x)
-        print(res.message) 
+        #print(res.x)
+        #print(res.message) 
         return res.x
 
 
@@ -157,17 +157,20 @@ def Supersmoother(rec, toggle, band):
                 except ValueError:
                     break 
                 
-                if len(minp) > 0 and minp[0][0] < banddata.mjd[0] + 40:
-                    mjd_new = mjd_fit# - minp[0][0]
-                    banddata.mjd = banddata.mjd# - minp[0][0]
+                if len(maxp) > 0: # and maxp[0][0] < banddata.mjd[0] + 40:
+                    mjd_new = mjd_fit - maxp[0][0]
+                    banddata.mjd = banddata.mjd - maxp[0][0]
             
-                    mag_new = mag_fit# - minp[0][1]
-                    banddata.mag = banddata.mag# - minp[0][1]
+                    mag_new = mag_fit - maxp[0][1]
+                    banddata.mag = banddata.mag - maxp[0][1]
                     
-
-                    if mjd_new[0] < 0-5 and mjd_new[-1] > 35:
-                        mjd_sampled = np.linspace(-5, 35, num = 40)
-                        mag_sampled = model.predict(mjd_sampled + minp[0][0]) - minp[0][1] 
+                    # Normalize the data along the y-axis and evenly sample for classification
+                    if mjd_new[0] < -20 and mjd_new[-1] > 60:
+                        mjd_sampled = np.linspace(-20, 60, num = 40)
+                        mag_sampled = spl(mjd_sampled + maxp[0][0]) - maxp[0][1] 
+                        maxd = np.amax(mag_sampled)
+                        mind = np.amin(mag_sampled)
+                        mag_sampled = (mag_sampled - mind) / (maxd - mind)
 
                         #if all(i <= 5 for i in mag_new) and all(i >= -0.1 for i in mag_new):
                         splinedat.append({'min': minp.tolist(), 'max': maxp.tolist(),'id': filename, 'stype': stype, 'band': flter, 'splinedata': mag_new.tolist(), 'phase': mjd_new.tolist(), 'xraw': banddata.mjd.tolist(), 'yraw': banddata.mag.tolist(), 'spldata_sampled': mag_sampled.tolist(), 'mjddata_sampled': mjd_sampled.tolist(), 'magerr': banddata.magerr.tolist()})
@@ -187,27 +190,40 @@ def Usplinefit(rec, toggle, band):
     # Convert rec to dict data structure
 
    
-
     filenames = np.unique(rec.name).tolist()
-
-    #for filename in filenames:
-    #    datastruct = 
     random.shuffle(filenames)
-
     if toggle == "Single":
         filenames = [filenames[1]]
     elif toggle == "Thirty":
-        filenames = filenames[0:30]
+        filenames = filenames[0:100]
 
+    datastruct = {}
+    
     for filename in filenames:
-        print filename
-        print band
+        idx = np.where(rec.name == filename)
+        data = rec[idx]
+        rec_new = np.recarray((len(data),),dtype=[('band', 'S20'), ('mjd', float), ('mag', float), ('magerr', float), ('stype',   int)]) 
+        rec_new.stype = data.stype
+        if data.stype[1] == -9:
+            continue
+        rec_new.band = data.band
+        rec_new.mjd = data.mjd
+        rec_new.mag = data.mag
+        rec_new.magerr = data.magerr
+        datastruct['{}'.format(filename)] = rec_new
+    random.shuffle(filenames)
+    print datastruct
+    for key, data in datastruct.iteritems():
+        stype = data.stype[1]
         #filters = [band]
-        filters = np.unique((rec.band))
+        filters = np.unique((data.band)).tolist()
+        if 'r' in filters:
+            filters.pop(filters.index('r'))
+            filters.insert(0,'r')
+        print filters
         for flter in filters:
-            idx = np.where((rec.band == flter) & (rec.name == filename))
-            print idx
-            banddata_unsorted = rec[idx]
+            idx = np.where(data.band == flter)
+            banddata_unsorted = data[idx]
             order = np.argsort(banddata_unsorted.mjd)
             banddata = banddata_unsorted[order]
             if len(banddata.mjd) > 6:
@@ -227,42 +243,54 @@ def Usplinefit(rec, toggle, band):
                 spl.set_smoothing_factor(smoothing_num)               
                 #spl.set_smoothing_factor(0.3)               
             
-                print smoothing_num
+                #print smoothing_num
 
-                mjd_new = np.linspace(banddata.mjd[0], banddata.mjd[-1], num = 200)
-                mag_new = spl(mjd_new)
-                print mag_new
-                print "Peak to Peak 10% ", np.ptp(mag_new) * 0.3
-                try:
-                    maxp, minp = peakfinding.peakdetect(mag_new, mjd_new, 5, np.ptp(mag_new)*0.3)
-                except:
-                    maxp, minp = np.array([]), np.array([])
-                minp = np.array(minp)
-                maxp = np.array(maxp)
-                print "minima: ", minp
-                print "maxima: ", maxp
+                mjd_fit = np.linspace(banddata.mjd[0], banddata.mjd[-1], num = 200)
+                mag_fit = spl(mjd_fit)
+                #print "Peak to Peak 10% ", np.ptp(mag_new) * 0.3
+                if flter == 'r':
+                    maxpr, minpr = peakfinding.peakdetect(mag_fit, mjd_fit, 5, np.ptp(mag_fit)*0.3)
+                    maxpr, minpr = np.array(maxpr), np.array(minpr)
+                    if len(maxpr) = 
+                #print "minima: ", minp
+                #print "maxima: ", maxp
                 
-                if len(minp) > 0 and minp[0][0] < banddata.mjd[0] + 40:
+                
+                if len(maxp) > 0: # and maxp[0][0] < banddata.mjd[0] + 40:
+                    mjd_new = mjd_fit - maxp[0][0]
+                    banddata.mjd = banddata.mjd - maxp[0][0]
+            
+                    mag_new = mag_fit - maxp[0][1]
+                    banddata.mag = banddata.mag - maxp[0][1]
                     
-                    mjd_new = mjd_new - minp[0][0]
-                    banddata.mjd = banddata.mjd - minp[0][0]
-
-                    mag_new = mag_new - minp[0][1]
-                    banddata.mag = banddata.mag - minp[0][1]
-                    
-                    stype = banddata.stype[1]
-    
-                    if mjd_new[0] < 0-5 and mjd_new[-1] > 35:
-                        mjd_sampled = np.linspace(-5, 35, num = 40)
-                        mag_sampled = spl(mjd_sampled + minp[0][0]) - minp[0][1] 
-
-                        if all(i <= 5 for i in mag_new) and all(i >= -0.1 for i in mag_new):
-                            splinedat.append({'min': minp.tolist(), 'max': maxp.tolist(),'id': filename, 'stype': stype, 'band': flter, 'splinedata': mag_new.tolist(), 'phase': mjd_new.tolist(), 'xraw': banddata.mjd.tolist(), 'yraw': banddata.mag.tolist(), 'spldata_sampled': mag_sampled.tolist(), 'mjddata_sampled': mjd_sampled.tolist(), 'magerr': banddata.magerr.tolist()})
+                    # Normalize the data along the y-axis and evenly sample for classification
+                    if mjd_new[0] < -20 and mjd_new[-1] > 60:
+                        mjd_sampled = np.linspace(-20, 60, num = 40)
+                        mag_sampled = spl(mjd_sampled + maxp[0][0]) - maxp[0][1] 
+                        maxd = np.amax(mag_sampled)
+                        mind = np.amin(mag_sampled)
+                        mag_sampled = (mag_sampled - mind) / (maxd - mind)
+#                if False and len(minp) > 0 and minp[0][0] < banddata.mjd[0] + 40:
+#                    
+#                    mjd_new = mjd_new - minp[0][0]
+#                    banddata.mjd = banddata.mjd - minp[0][0]
+#
+#                    mag_new = mag_new - minp[0][1]
+#                    banddata.mag = banddata.mag - minp[0][1]
+#                    
+#                    stype = banddata.stype[1]
+#    
+#                    if mjd_new[0] < 0-5 and mjd_new[-1] > 35:
+#                        mjd_sampled = np.linspace(-5, 35, num = 40)
+#                        mag_sampled = spl(mjd_sampled + minp[0][0]) - minp[0][1] 
+#
+#                        if all(i <= 5 for i in mag_new) and all(i >= -0.1 for i in mag_new):
+                        splinedat.append({'min': minp.tolist(), 'max': maxp.tolist(),'id': filename, 'stype': stype, 'band': flter, 'splinedata': mag_new.tolist(), 'phase': mjd_new.tolist(), 'xraw': banddata.mjd.tolist(), 'yraw': banddata.mag.tolist(), 'spldata_sampled': mag_sampled.tolist(), 'mjddata_sampled': mjd_sampled.tolist(), 'magerr': banddata.magerr.tolist()})
 #                    else:
 #                        splinedat.append({'id': filename, 'stype': stype, 'band': flter, 'splinedata': mag_new.tolist(), 'phase': mjd_new.tolist(), 'xraw': banddata.mjd.tolist(), 'yraw': banddata.mag.tolist()})
 #                        print(banddata.mjd.tolist(), banddata.mag.tolist())
-                else:
-                    splinedat.append({'mjddata_sampled': [], 'spldata_sampled': [],'min': minp.tolist(), 'max': maxp.tolist(),'id': filename, 'stype': banddata.stype.tolist(), 'band': flter, 'splinedata': mag_new.tolist(), 'phase': mjd_new.tolist(),'magerr': banddata.magerr.tolist(), 'xraw': banddata.mjd.tolist(), 'yraw': banddata.mag.tolist()})
+                #else:
+                #    splinedat.append({'mjddata_sampled': [], 'spldata_sampled': [],'min': minp.tolist(), 'max': maxp.tolist(),'id': filename, 'stype': banddata.stype.tolist(), 'band': flter, 'splinedata': mag_fit.tolist(), 'phase': mjd_fit.tolist(),'magerr': banddata.magerr.tolist(), 'xraw': banddata.mjd.tolist(), 'yraw': banddata.mag.tolist()})
             else:
                 print "Insufficient Data"
     

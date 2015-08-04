@@ -58,6 +58,7 @@ class LCVisualization(Tk.Frame):
         self.toggle = Tk.StringVar()
         self.stype = Tk.StringVar()
         self.norm = Tk.IntVar()
+        self.sampled = Tk.IntVar()
 
         self.DataSelect(parent)
         self.GetData()
@@ -92,6 +93,7 @@ class LCVisualization(Tk.Frame):
     # Create method Plot to allow for on the fly adjustment of the plotting
     def Plot(self):
         self.ax0.clear()
+        count = 0
         for data in self.splinedat:
             if data['band'] == self.band.get():
                 minp = np.array(data['min'])
@@ -109,11 +111,19 @@ class LCVisualization(Tk.Frame):
                     #    self.ax0.scatter(np.array(data['max'])[:,0], np.array(data['max'])[:,1], color='red')
                     #self.ax0.errorbar(xraw, yraw, yerr=data['magerr'],fmt='o')
                 print self.norm.get()
+                print data
                 if self.norm.get() == 1:
-                    print len(data['max'])
-                    if len(data['max']) > 0:
-                        ydata = data['splinedata'] - maxp[0][1]
-                        xdata = data['phase'] - maxp[0][0]
+                    # Normalize the data along the y axis
+                    if self.sampled.get() == 1 and len(data['spldata_sampled']) > 1:
+                        print data['stype']
+                        if data['stype'] != -9:
+                            ydata = np.array(data['spldata_sampled'])# - maxp[0][1]
+                            xdata = np.array(data['mjddata_sampled'])# - maxp[0][0]
+                            count += 1 
+                            self.ax0.plot(xdata, ydata)
+                    elif len(data['max']) > 0:
+                        ydata = data['splinedata']# - maxp[0][1]
+                        xdata = data['phase']# - maxp[0][0]
                         xraw = data['xraw'] - maxp[0][0]
                         yraw = data['yraw'] - maxp[0][1]
                         print 'Yay!', maxp[0][1]
@@ -132,7 +142,7 @@ class LCVisualization(Tk.Frame):
                 #self.ax0.plot(xdata, ydata)
                 #self.ax0.errorbar(xraw, yraw, yerr=data['magerr'], fmt='o')
                    
-
+        print count        
         self.canvas.show()
         #self.f.canvas.mpl_connect('button_press_event', self.onPick)         
         
@@ -248,6 +258,7 @@ class LCVisualization(Tk.Frame):
         Tk.Button(self.JSONFrame, text="Export current data to JSON", command = self.Export).grid(row=0, padx=5, pady=5)
         Tk.Button(self.JSONFrame, text="Plot data", command = self.plot).grid(row=1, padx=5, pady=5)
         Tk.Checkbutton(self.JSONFrame, text = "Move to Origin", command = self.normalize, variable = self.norm).grid(row=2, padx=5, pady=5)
+        Tk.Checkbutton(self.JSONFrame, text = 'Sampled Data only', command = self.normalize, variable = self.sampled).grid(row=3, padx=5, pady=5)
         
 
     #Define the commands all the Buttons are tied to
@@ -262,7 +273,7 @@ class LCVisualization(Tk.Frame):
         #self.Plot()
 
     def normalize(self):
-        print self.norm.get()
+        print self.norm.get(), self.sampled.get()
 
     def togglecheck(self):
         print self.toggle.get()
