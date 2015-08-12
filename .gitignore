@@ -1,3 +1,4 @@
 #Ignore the data files
 data/
-DESnoHOSTZ_pdump
+DESnoHOSTZ*
+Splinedata*
