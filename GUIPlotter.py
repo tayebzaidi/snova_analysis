@@ -76,8 +76,8 @@ class LCVisualization(Tk.Frame):
         self.ax0 = self.f.add_subplot(1,1,1)
         #self.ax0.set_aspect(1)
 
-        self.ax0.set_xlabel( 'Time (days)' )
-        self.ax0.set_ylabel( 'Magnitude (Inverted)' )
+        self.ax0.set_xlabel( 'Phase (days)' )
+        self.ax0.set_ylabel( 'Normalized Flux' )
 
         self.frame = Tk.Frame(parent)
         self.frame.grid(row=0,padx=5,pady=5, column = 1)
@@ -89,6 +89,11 @@ class LCVisualization(Tk.Frame):
         self.toolbar = tkagg.NavigationToolbar2TkAgg(self.canvas, self.frame )
         self.toolbar.grid(row=2)
         self.toolbar.update()
+
+        #labels for axes
+        #self.ax0.xlabel('Phase', fontsize=18)
+        #self.ax0.ylabel('Normalized Flux', fontsize = 16)
+        #self.suptitle('L
 
     # Create method Plot to allow for on the fly adjustment of the plotting
     def Plot(self):

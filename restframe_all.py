@@ -114,7 +114,7 @@ def main():
 def main2(splinedat):
     try:
         filenames =  [sys.argv[1]]
-        prnt = True
+        prnt = False
     except:
         prnt = False
         path = "/Users/zaidi/Documents/REU/restframe/"
@@ -188,7 +188,9 @@ def main2(splinedat):
                     ax = fig.add_subplot(1,1,1)
                     if len(phase_new) == len(mag_knot):
                         ax.plot(phase_20, splinedata, color = 'green')
-                    ax.plot(banddata.phase[order], spl1d(banddata.phase[order]) - banddata.mag.min())
+                    ax.errorbar(banddata.phase[order], spl1d(banddata.phase[order]) - banddata.mag.min(), yerr = banddata.err[order], fmt = 'o')
+                    ax.set_xlabel('Phase (days)', fontsize = 18)
+                    ax.set_ylabel('Magnitude', fontsize = 18)
                     ax.scatter(banddata.phase, banddata.mag - banddata.mag.min(), color = 'brown', alpha = 0.4)
                     if len(minp) > 0:
                         ax.scatter(minp[:,0], minp[:,1] - banddata.mag.min(), color = 'red')
