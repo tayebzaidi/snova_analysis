@@ -192,7 +192,8 @@ def main2(splinedat):
                     ax = fig.add_subplot(1,1,1)
                     if len(phase_new) == len(mag_knot):
                         ax.plot(phase_20, splinedata, color = 'green', lw = 3)
-                    ax.errorbar(banddata.phase[order], spl1d(banddata.phase[order]) - banddata.mag.min(), yerr = banddata.err[order], fmt = 'o', ms = 4)
+                    ax.errorbar(banddata.phase[order], spl1d(banddata.phase[order]) - banddata.mag.min(), yerr = banddata.err[order], fmt = 'o', ms = 5)
+                    ax.text(35, 0, filename.rstrip('.rest.dat'), fontsize = 18)
                     ax.set_xlabel('Phase (days)', fontsize = 18)
                     ax.set_ylabel('Magnitude', fontsize = 18)
                     ax.scatter(banddata.phase, banddata.mag - banddata.mag.min(), color = 'brown', alpha = 0.4)
