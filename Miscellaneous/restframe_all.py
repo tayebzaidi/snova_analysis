@@ -12,6 +12,10 @@ import os
 import json
 import glob
 
+import matplotlib as mpl
+
+mpl.rcParams['axes.linewidth'] = 2 #set the value globally
+
 def find_nearest_ind(array,value):
     idx = np.abs(array-value).argmin()
     return idx
@@ -187,8 +191,8 @@ def main2(splinedat):
                     fig = plt.figure(figsize = (12,12))
                     ax = fig.add_subplot(1,1,1)
                     if len(phase_new) == len(mag_knot):
-                        ax.plot(phase_20, splinedata, color = 'green')
-                    ax.errorbar(banddata.phase[order], spl1d(banddata.phase[order]) - banddata.mag.min(), yerr = banddata.err[order], fmt = 'o')
+                        ax.plot(phase_20, splinedata, color = 'green', lw = 3)
+                    ax.errorbar(banddata.phase[order], spl1d(banddata.phase[order]) - banddata.mag.min(), yerr = banddata.err[order], fmt = 'o', ms = 4)
                     ax.set_xlabel('Phase (days)', fontsize = 18)
                     ax.set_ylabel('Magnitude', fontsize = 18)
                     ax.scatter(banddata.phase, banddata.mag - banddata.mag.min(), color = 'brown', alpha = 0.4)
