@@ -1,6 +1,6 @@
 from supersmoother import SuperSmoother, LinearSmoother
-import pyqt_fit.nonparam_regression as smooth
-from pyqt_fit import npr_methods
+#import pyqt_fit.nonparam_regression as smooth
+#from pyqt_fit import npr_methods
 import random
 import numpy as np
 import scipy.interpolate as scinterp
@@ -82,7 +82,7 @@ class Optimizer(object):
         #print(res.message) 
         return res.x
 
-
+"""
 def NonParam(rec, toggle, band):
     splinedat = []
     filenames = np.unique(rec.name).tolist()
@@ -184,7 +184,7 @@ def Supersmoother(rec, toggle, band):
     
     
     return splinedat, len(splinedat)
- 
+""" 
 def Usplinefit(rec, toggle, band):
     splinedat = []
     # Convert rec to dict data structure

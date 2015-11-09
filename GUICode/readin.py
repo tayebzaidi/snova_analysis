@@ -167,7 +167,7 @@ def DESnoHOSTZ():
         
         #initialize data structure to store the data
         
-        stype_txt = np.recfromtxt('./data/TEST+HOST.KEY', usecols = (1,2,3,4,5,6), names = ['cid', 'gentype', 'sntype', 'genz', 'hostz', 'hostzerr'], skip_header = 2, case_sensitive = 'lower', invalid_raise = False)
+        stype_txt = np.recfromtxt('../data/TEST+HOST.KEY', usecols = (1,2,3,4,5,6), names = ['cid', 'gentype', 'sntype', 'genz', 'hostz', 'hostzerr'], skip_header = 2, case_sensitive = 'lower', invalid_raise = False)
 
         lookup = [3730,4490,4760,4810]
         for filename in filenames:

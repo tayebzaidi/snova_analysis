@@ -1,4 +1,5 @@
 #Ignore the data files
+data
 data/
 DESnoHOSTZ*
 Splinedata*

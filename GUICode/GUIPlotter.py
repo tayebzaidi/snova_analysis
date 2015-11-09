@@ -85,9 +85,11 @@ class LCVisualization(Tk.Frame):
         self.canvas = tkagg.FigureCanvasTkAgg(self.f, master=self.frame)
         self.canvas.get_tk_widget().grid(row=0,padx=5,pady=5)
         self.canvas.show()
+
+        toolbar_frame = Tk.Frame(parent)
+        toolbar_frame.grid(row=2)
      
-        self.toolbar = tkagg.NavigationToolbar2TkAgg(self.canvas, self.frame )
-        self.toolbar.grid(row=2)
+        self.toolbar = tkagg.NavigationToolbar2TkAgg(self.canvas, toolbar_frame )
         self.toolbar.update()
 
         #labels for axes
