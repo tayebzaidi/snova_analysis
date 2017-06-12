@@ -6,3 +6,5 @@ In order for the LightCurve Visualization to run, make sure you have downloaded 
 Then cd into the GUICode directory and run the command 'python GUIPlotter.py'
 
 Use the GUI plotter as guided by your intuition, and by emailing me if necessary at tayebzaidi@gmail.com
+
+Second update for PR
